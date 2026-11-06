@@ -6,8 +6,6 @@
 
 **Distribusi Linux berbasis CachyOS dengan Hyprland**
 
-*Final Project Mata Kuliah Sistem Operasi (Ganjil 2026/2027) — Kategori A*
-
 [![Arch Linux](https://img.shields.io/badge/Base-CachyOS%20%28Arch%29-1793d1?logo=arch-linux&logoColor=white)](#)
 [![Compositor](https://img.shields.io/badge/Compositor-Hyprland%20Wayland-00a8ff)](#)
 [![Scheduler](https://img.shields.io/badge/Kernel-BORE%20Scheduler-ff4757)](#)
@@ -17,34 +15,32 @@
 
 ---
 
-## 🌟 Tentang ConstOS
+## Tentang ConstOS
 
-**ConstOS** adalah distribusi Linux berbasis **CachyOS** untuk pengembang perangkat lunak dan mahasiswa informatika. Profil live awal menargetkan x86_64 UEFI dengan kernel CachyOS BORE, Hyprland, Waybar, dan swap ZRAM. **Const Harness** adalah integrasi yang direncanakan untuk edisi berikutnya.
-
-**Ryoku** digunakan sebagai referensi untuk pemisahan profil ISO, sistem terpasang, dan konfigurasi desktop. ConstOS punya repo dan riwayat pengembangan sendiri.
+ConstOS adalah distribusi Linux berbasis CachyOS untuk pengembangan perangkat lunak dan penggunaan desktop sehari-hari. Profil live awal menargetkan x86_64 UEFI dengan kernel CachyOS BORE, Hyprland, Waybar, dan swap ZRAM. Const Harness adalah integrasi yang direncanakan untuk edisi berikutnya.
 
 ---
 
-## ⚙️ Pemetaan 5 Konsep Inti Sistem Operasi
+## Arsitektur dan status pengembangan
 
-Diagram ini menggambarkan target akhir proyek. Status tiap komponen ada di tabel berikut.
+Diagram berikut menunjukkan arsitektur yang dituju. Tabel di bawahnya membedakan komponen yang sudah disiapkan dari integrasi yang masih direncanakan atau perlu diuji.
 
 ```mermaid
 flowchart TD
-    subgraph KernelSpace ["1. Kernel & Hardware Subsistem (CachyOS)"]
+    subgraph KernelSpace ["Kernel & Hardware (CachyOS)"]
         CPU["CPU Scheduling<br/>(BORE / sched-ext)"]
         MEM["Virtual Memory & Paging<br/>(ZRAM lz4/zstd + Swappiness Tuning)"]
         FS["Storage & File System<br/>(Btrfs Subvolumes + CoW Snapshots)"]
     end
 
-    subgraph SystemSpace ["2. System Layer & Daemons"]
+    subgraph SystemSpace ["System Layer & Daemons"]
         ProcFS["/proc & /sys Virtual Filesystem"]
         Systemd["systemd Services & User Units"]
         ConstD["constd (OS-MCP Bridge Daemon)"]
         Bwrap["Bubblewrap (bwrap) Sandbox"]
     end
 
-    subgraph UserSpace ["3. User Desktop Environment (Wayland)"]
+    subgraph UserSpace ["Desktop Environment (Wayland)"]
         Hyprland["Hyprland Window Manager"]
         Harness["Const Harness AI Workbench"]
         Ollama["Local LLM Engine (Ollama - Offline Fallback)"]
@@ -61,23 +57,23 @@ flowchart TD
     Ollama --> Harness
 ```
 
-| Konsep Inti Sistem Operasi | Status |
+| Komponen | Status |
 | :--- | :--- |
-| **1. Process & CPU Scheduling** | Manifest live memilih kernel CachyOS BORE. Prototipe `constd` membaca load average dan sampel state proses. |
-| **2. Memory Management & Paging** | Overlay live mengatur `zram-generator` dengan `zstd`, `vm.swappiness = 100`, dan `vm.vfs_cache_pressure = 50`. |
-| **3. File System & Storage** | Perkakas Btrfs dan Snapper masuk manifest. Penataan subvolume dan recovery pada sistem terpasang masih dalam pengembangan. |
-| **4. Inter-Process Communication (IPC)** | `constd` punya prototipe HTTP GET/JSON. Integrasi dengan Harness dan transport MCP masih direncanakan. |
-| **5. Protection & Security** | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
+| Kernel dan proses | Manifest live memilih kernel CachyOS BORE. Prototipe `constd` membaca load average dan sampel state proses. |
+| Memori dan ZRAM | Overlay live mengatur `zram-generator` dengan `zstd`, `vm.swappiness = 100`, dan `vm.vfs_cache_pressure = 50`. |
+| Storage dan recovery | Perkakas Btrfs dan Snapper masuk manifest. Penataan subvolume dan recovery pada sistem terpasang masih dalam pengembangan. |
+| Telemetri dan integrasi Harness | `constd` punya prototipe HTTP GET/JSON. Integrasi dengan Harness dan transport MCP masih direncanakan. |
+| Sandbox dan izin | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
 
 ---
 
-## 📁 Struktur Repositori
+## Struktur Repositori
 
 ```text
 ConstOS/
 ├── assets/                        # Logo dan aset visual ConstOS
-├── docs/                          # Blueprint proyek & panduan teknis
-│   ├── blueprint.md               # Master plan & arsitektur SO
+├── docs/                          # Arsitektur distro & panduan teknis
+│   ├── blueprint.md               # Rancangan arsitektur ConstOS
 │   └── build-guide.md             # Panduan build ISO di lingkungan Arch/CachyOS
 ├── iso/                           # Mesin build ISO (Archiso + CachyOS profile)
 │   ├── buildiso.sh                # Skrip utama generator ISO
@@ -101,7 +97,7 @@ ConstOS/
 
 ---
 
-## 🚀 Cara Membangun ISO
+## Cara Membangun ISO
 
 Lihat panduan lengkap di [docs/build-guide.md](docs/build-guide.md).
 
@@ -112,19 +108,14 @@ sudo bash iso/buildiso.sh -v
 
 ---
 
-## 👥 Tim Pengembang
+## Pengembangan
 
-| No | Nama Anggota | Peran | Tanggung Jawab Utama |
-| :---: | :--- | :--- | :--- |
-| 1 | **Alif Constantine** | *Project Manager & Build Master* | Pipeline build ISO, koordinasi repositori, konfigurasi base Archiso. |
-| 2 | *(Anggota 2)* | *Storage & Installer Engineer* | Modul Calamares Btrfs, konfigurasi bootloader GRUB/Plymouth. |
-| 3 | *(Anggota 3)* | *Desktop Environment & UI Lead* | Konfigurasi Hyprland, Waybar studio monochrome, dan Wofi/Foot. |
-| 4 | *(Anggota 4)* | *Application Integrator & Runtime Lead* | Packaging pacman Const Harness, systemd user services, Ollama offline. |
-| 5 | *(Anggota 5)* | *System Daemon & Security Engineer* | Daemon `constd` (OS-MCP Bridge) dan isolasi Bubblewrap (`bwrap`). |
-| 6 | *(Anggota 6)* | *QA, Benchmark & Documentation Lead* | Benchmark boot time, penyusunan Laporan Proyek Bab I–V, video demo. |
+ConstOS dikembangkan oleh Alif Constantine. Urutan integrasi, target rilis, dan kriteria verifikasi ada di [roadmap pengembangan](implementation_plan.md).
+
+ISO live sudah dibangun di Linux dan diuji di VM UEFI. Boot ke Hyprland, launcher, terminal, pengelola berkas, jaringan, ZRAM, dan console fallback berfungsi. Fokus berikutnya adalah Boot UI dan jalur instalasi ke disk.
 
 ---
 
-## 📄 Lisensi
+## Lisensi
 
 Proyek ini dirilis di bawah lisensi [GPLv3](https://www.gnu.org/licenses/gpl-3.0.html). Komponen Const Harness dilisensikan secara terpisah.
