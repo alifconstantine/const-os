@@ -1,0 +1,11 @@
+NAME="ConstOS"
+PRETTY_NAME="ConstOS (Harness Edition)"
+ID=constos
+ID_LIKE="cachyos arch"
+BUILD_ID=rolling
+ANSI_COLOR="38;2;255;255;255"
+HOME_URL="https://github.com/alifconstantine/const-os"
+DOCUMENTATION_URL="https://github.com/alifconstantine/const-os"
+SUPPORT_URL="https://github.com/alifconstantine/const-os/issues"
+BUG_REPORT_URL="https://github.com/alifconstantine/const-os/issues"
+LOGO=constos
