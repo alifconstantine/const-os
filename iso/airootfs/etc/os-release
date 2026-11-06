@@ -1,5 +1,5 @@
 NAME="ConstOS"
-PRETTY_NAME="ConstOS (Harness Edition)"
+PRETTY_NAME="ConstOS"
 ID=constos
 ID_LIKE="cachyos arch"
 BUILD_ID=rolling

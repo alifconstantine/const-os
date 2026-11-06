@@ -2,6 +2,8 @@
 **Final Project Mata Kuliah Sistem Operasi (Ganjil 2026/2027)**  
 *Kategori A: Distro Linux dengan Visi Tertentu*
 
+Dokumen ini menjelaskan target proyek. Cek [status di README](../README.md) dan [panduan build](build-guide.md) untuk profil live saat ini.
+
 ---
 
 ## 1. Identitas & Visi Proyek

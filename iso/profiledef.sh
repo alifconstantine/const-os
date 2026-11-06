@@ -4,13 +4,12 @@
 iso_name="constos"
 iso_label="CONSTOS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="ConstOS Project <https://github.com/alifconstantine/const-os>"
-iso_application="ConstOS Live Desktop (Harness Edition)"
+iso_application="ConstOS Live Desktop"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="arch"
 buildmodes=('iso')
 
-## GRUB Bootloader
-bootmodes=('bios.syslinux' 'uefi.grub')
+bootmodes=('uefi.grub')
 
 arch="x86_64"
 pacman_conf="pacman.conf"
@@ -21,7 +20,6 @@ file_permissions=(
   ["/etc/shadow"]="0:0:400"
   ["/etc/gshadow"]="0:0:400"
   ["/root"]="0:0:750"
-  ["/etc/polkit-1/rules.d"]="0:0:750"
   ["/etc/sudoers.d"]="0:0:750"
   ["/etc/sudoers.d/g_wheel"]="0:0:440"
   ["/root/.automated_script.sh"]="0:0:755"
@@ -34,6 +32,5 @@ file_permissions=(
   ["/usr/local/bin/removeun"]="0:0:755"
   ["/usr/local/bin/removeun-online"]="0:0:755"
   ["/usr/local/bin/prepare-live-desktop.sh"]="0:0:755"
-  ["/usr/local/bin/nvidia-module-loader"]="0:0:755"
   ["/usr/local/bin/pkexec-wrapper"]="0:0:755"
 )

@@ -8,7 +8,8 @@ Direktori ini berfungsi sebagai repositori pacman lokal untuk menampung paket bi
    * `const-harness-desktop-0.0.2-1-x86_64.pkg.tar.zst`
 2. Jalankan perintah pembuatan database repositori:
    ```bash
-   repo-add constos.db.tar.zst *.pkg.tar.zst
+   repo-add constos-local.db.tar.zst *.pkg.tar.zst
    ```
-3. File database `constos.db.tar.zst` dan symlink `constos.db` akan terbuat secara otomatis.
-4. Skrip build Archiso (`iso/buildiso.sh`) akan membaca repositori ini sesuai konfigurasi di `iso/pacman.conf`.
+3. File database `constos-local.db.tar.zst` dan symlink `constos-local.db` akan terbuat secara otomatis.
+
+Profil live saat ini dapat dibangun tanpa repositori lokal. Aktifkan repositori ini saat paket Harness sudah memuat binary yang dapat dijalankan.

@@ -12,8 +12,8 @@ shift || true
 
 # Verifikasi keberadaan bwrap
 if ! command -v bwrap >/dev/null 2>&1; then
-    echo "Warning: bubblewrap (bwrap) not found. Running command unconfined." >&2
-    exec "$@"
+    echo "ConstOS sandbox requires bubblewrap (bwrap)." >&2
+    exit 127
 fi
 
 # Jalankan dalam sandbox terisolasi:

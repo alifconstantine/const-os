@@ -16,19 +16,11 @@
     "spacing": 5, // Gaps between modules (4px)
 
     "modules-left": [
-        //"custom/rofi",
         "hyprland/workspaces",
-        //"hyprland/submap",
-        "temperature",
-        //"idle_inhibitor",
-        //"mpd"
-        "custom/spotify"
+        "temperature"
     ],
     "modules-center": [
-        //"hyprland/window"
-        "clock#date",
-        "custom/weather"
-        //"custom/gammastep"
+        "clock#date"
     ],
     "modules-right": [
         "backlight",
@@ -67,8 +59,8 @@
     },
     "custom/screenshot_t":{
         "format":" ",
-        "on-click": "~/.config/hypr/scripts/screenshot_full",
-        "on-click-right":"~/.config/hypr/scripts/screenshot_area"
+        "on-click": "grim - | wl-copy",
+        "on-click-right": "region=$(slurp) && grim -g \"$region\" - | wl-copy"
     },
 
     "clock#1": {
@@ -98,13 +90,13 @@
         "format-icons": ["", "", ""],
         "max-length": 7,
         "min-length": 7,
-        "on-click": "xsensors"
+        "on-click": "foot btop"
     },
 
     "memory": {
         "interval": 30,
         "format": "  {used:0.2f} / {total:0.0f} GB",
-        "on-click": "alacritty -e btop"
+        "on-click": "foot btop"
     },
 
     "battery": {
@@ -144,7 +136,7 @@
         "format-alt-click": "click-right",
         "return-type": "json",
         "interval": 60,
-        "exec": "~/.config/waybar/modules/storage.sh"
+        "exec": "sh ~/.config/waybar/modules/storage.sh"
     },
 
     "backlight": {
@@ -312,8 +304,8 @@
             "9": "九",
             "10": "十",
         },
-        "on-scroll-up": "hyprctl dispatch workspace e+1 1>/dev/null",
-        "on-scroll-down": "hyprctl dispatch workspace e-1 1>/dev/null",
+        "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })' >/dev/null",
+        "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })' >/dev/null",
         "sort-by-number": true,
         "active-only": false,
     },
@@ -348,7 +340,7 @@
 
     "wireplumber": {
         "on-click": "pavucontrol",
-        "on-click-right": "amixer sset Master toggle 1>/dev/null",
+        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
         //on-click: "${wpctl} set-mute @DEFAULT_AUDIO_SINK@ toggle";
         //on-scroll-down: "${wpctl} set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 0.04+";
         //on-scroll-up: "${wpctl} set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 0.04-";

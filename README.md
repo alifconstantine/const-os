@@ -2,9 +2,9 @@
 
 <img src="assets/const-logo-dark.png" alt="ConstOS Logo" width="320"/>
 
-# ConstOS (Harness Edition)
+# ConstOS
 
-**Sistem Operasi Berbasis CachyOS dengan Wayland Compositor (Hyprland) & Terintegrasi Const Harness**
+**Distribusi Linux berbasis CachyOS dengan Hyprland**
 
 *Final Project Mata Kuliah Sistem Operasi (Ganjil 2026/2027) — Kategori A*
 
@@ -19,15 +19,15 @@
 
 ## 🌟 Tentang ConstOS
 
-**ConstOS** adalah distribusi Linux turunan **CachyOS** yang dioptimalkan untuk pengembang perangkat lunak dan mahasiswa informatika. ConstOS memadukan keunggulan performa kernel CachyOS (BORE CPU scheduler & instruksi x86-64-v3/v4), keanggunan tiling compositor **Hyprland** bergaya *monochrome studio*, dan integrasi subsistem tingkat dalam dengan **Const Harness** (AI Desktop Workbench).
+**ConstOS** adalah distribusi Linux berbasis **CachyOS** untuk pengembang perangkat lunak dan mahasiswa informatika. Profil live awal menargetkan x86_64 UEFI dengan kernel CachyOS BORE, Hyprland, Waybar, dan swap ZRAM. **Const Harness** adalah integrasi yang direncanakan untuk edisi berikutnya.
 
-Berbeda dari distro konvensional yang memperlakukan AI sebagai aplikasi pihak ketiga biasa, ConstOS menghadirkan jembatan sistem lokal (**`constd`** / OS-MCP bridge) yang memungkinkan agen AI menginspeksi metrik kernel (proses, CPU ticks, alokasi memori, dan kompresi ZRAM) dalam ruang isolasi aman (**Bubblewrap `bwrap`**).
+**Ryoku** digunakan sebagai referensi untuk pemisahan profil ISO, sistem terpasang, dan konfigurasi desktop. ConstOS punya repo dan riwayat pengembangan sendiri.
 
 ---
 
 ## ⚙️ Pemetaan 5 Konsep Inti Sistem Operasi
 
-Distro ini dirancang dengan implementasi eksplisit terhadap 5 pilar sistem operasi:
+Diagram ini menggambarkan target akhir proyek. Status tiap komponen ada di tabel berikut.
 
 ```mermaid
 flowchart TD
@@ -61,13 +61,13 @@ flowchart TD
     Ollama --> Harness
 ```
 
-| Konsep Inti Sistem Operasi | Implementasi Nyata di ConstOS |
+| Konsep Inti Sistem Operasi | Status |
 | :--- | :--- |
-| **1. Process & CPU Scheduling** | Menggunakan kernel CachyOS dengan scheduler **BORE (Burst-Oriented Response Enhancer)** yang mengoptimalkan interaktivitas desktop. State proses (`R`, `S`, `Z`) diekspos melalui daemon `constd`. |
-| **2. Memory Management & Paging** | Mengaktifkan **`zram-generator`** (swap RAM terkompresi `zstd`/`lz4`) untuk meminimalkan I/O disk lambat, dipadukan tuning `vm.swappiness = 100` dan `vm.vfs_cache_pressure = 50`. |
-| **3. File System & Storage** | Format default **Btrfs** dengan subvolume modern (`@`, `@home`, `@snapshots`), fitur *Copy-on-Write (CoW)*, serta snapshot pemulihan otomatis via **Snapper**. |
-| **4. Inter-Process Communication (IPC)** | Daemon lokal **`constd`** bertindak sebagai OS-MCP Bridge, mengalirkan data status kernel ke antarmuka AI Workbench melalui UNIX socket / JSON-RPC. |
-| **5. Protection & Security** | Terminal automated execution dari agen AI diisolasi dalam sandbox **Bubblewrap (`bwrap`)**, membatasi hak akses agen agar tidak dapat merusak rootfs (`/`, `/etc`). |
+| **1. Process & CPU Scheduling** | Manifest live memilih kernel CachyOS BORE. Prototipe `constd` membaca load average dan sampel state proses. |
+| **2. Memory Management & Paging** | Overlay live mengatur `zram-generator` dengan `zstd`, `vm.swappiness = 100`, dan `vm.vfs_cache_pressure = 50`. |
+| **3. File System & Storage** | Perkakas Btrfs dan Snapper masuk manifest. Penataan subvolume dan recovery pada sistem terpasang masih dalam pengembangan. |
+| **4. Inter-Process Communication (IPC)** | `constd` punya prototipe HTTP GET/JSON. Integrasi dengan Harness dan transport MCP masih direncanakan. |
+| **5. Protection & Security** | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
 
 ---
 
@@ -82,21 +82,20 @@ ConstOS/
 ├── iso/                           # Mesin build ISO (Archiso + CachyOS profile)
 │   ├── buildiso.sh                # Skrip utama generator ISO
 │   ├── profiledef.sh              # Metadata ISO ConstOS
-│   ├── pacman.conf                # Repositori mirror CachyOS + repo lokal ConstOS
-│   ├── packages.x86_64            # Daftar paket sistem, Hyprland, ZRAM, dan Harness
+│   ├── pacman.conf                # Repositori paket CachyOS dan Arch
+│   ├── packages.x86_64            # Manifest paket sesi live
 │   └── airootfs/                  # Root filesystem overlay
 │       ├── etc/os-release         # Identitas resmi ConstOS
 │       ├── etc/systemd/zram-generator.conf
 │       ├── etc/sysctl.d/99-constos-memory.conf
 │       └── usr/local/bin/const-sandbox
 ├── desktop/                       # Konfigurasi antarmuka Hyprland
-│   ├── hypr/                      # hyprland.conf & modul konfigurasi (SUPER+H for Harness)
-│   ├── waybar/                    # Status bar (Widget: ZRAM, CPU load, constd status)
-│   ├── wofi/                      # App launcher
-│   └── foot/                      # Terminal emulator
-├── installer/                     # Calamares GUI installer custom Btrfs subvolumes
+│   ├── hypr/                      # Konfigurasi Hyprland
+│   ├── waybar/                    # Status bar dan metrik desktop
+│   └── wofi/                      # App launcher
+├── installer/                     # Rancangan konfigurasi dan branding Calamares
 ├── daemons/
-│   └── constd/                    # OS-MCP bridge daemon (pembaca /proc & /sys)
+│   └── constd/                    # Prototipe monitor /proc dan /sys
 └── packages/                      # Packaging pacman untuk Const Harness (.pkg.tar.zst)
 ```
 
@@ -107,11 +106,8 @@ ConstOS/
 Lihat panduan lengkap di [docs/build-guide.md](docs/build-guide.md).
 
 ```bash
-# 1. Masuk ke direktori iso
-cd iso
-
-# 2. Jalankan buildiso dengan hak akses root
-sudo ./buildiso.sh -v -w work -o out
+bash iso/buildiso.sh --stage-only
+sudo bash iso/buildiso.sh -v
 ```
 
 ---

@@ -1,81 +1,70 @@
-#!/bin/bash
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; version 2 of the License.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e
-src_dir=$(pwd)
-[[ -r ${src_dir}/util-msg.sh ]] && source ${src_dir}/util-msg.sh
-import ${src_dir}/util.sh
-
-# setting of the general parameters
-work_dir="${src_dir}/build"
-outFolder="${src_dir}/out"
-
-build_list_iso="desktop"
-clean_first=true
-verbose=false
-build_in_ram=false
-remove_build_dir=false
+iso_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+repo_dir=$(dirname -- "$iso_dir")
+work_dir="$iso_dir/work"
+out_dir="$iso_dir/out"
+stage_only=false
+options=()
 
 usage() {
-    echo "Usage: ${0##*/} [options]"
-    echo '    -c                 Disable clean work dir'
-    echo '    -r                 Enable building in RAM on systems with more than 23GB RAM'
-    echo '    -w                 Remove build directory (not the ISO) after ISO file is built'
-    echo "    -p <profile>       Buildset or profile [default: ${build_list_iso}]"
-    echo '    -v                 Verbose output to log file, show profile detail (-q)'
-    echo '    -h                 This help'
-    echo ''
-    echo ''
-    exit $1
+    printf '%s\n' 'Usage: buildiso.sh [-v] [-w work_dir] [-o out_dir] [--stage-only]'
 }
 
-orig_argv=("$@")
+die() {
+    printf 'ConstOS build: %s\n' "$*" >&2
+    exit 1
+}
 
-opts='p:cvhrw'
-
-while getopts "${opts}" arg; do
-    case "${arg}" in
-        c) clean_first=false ;;
-        p) build_list_iso="$OPTARG" ;;
-        r) build_in_ram=true ;;
-        w) remove_build_dir=true ;;
-        v) verbose=true ;;
-        h|?) usage 0 ;;
-        *) echo "invalid argument '${arg}'"; usage 1 ;;
+while (( $# )); do
+    case "$1" in
+        -h|--help) usage; exit 0 ;;
+        -v) options+=(-v); shift ;;
+        -w|-o)
+            [[ -n ${2:-} && $2 != -* ]] || die "$1 requires a directory"
+            case "$1" in
+                -w) work_dir=$2 ;;
+                -o) out_dir=$2 ;;
+            esac
+            shift 2
+            ;;
+        --stage-only) stage_only=true; shift ;;
+        *) usage >&2; die "unknown argument: $1" ;;
     esac
 done
 
-shift $(($OPTIND - 1))
-
-timer_start=$(get_timer)
-
-#check_root "$0" "${orig_argv[@]}"
-
-# Build ISO in RAM if RAM amount is greater than 23GB. This would speed up build process and extend disk lifetime 
-if [[ "$build_in_ram" == "true" ]] && [[ $(grep MemTotal /proc/meminfo | awk '{print int($2/1024/1024)}') -gt 23 ]]; then
-    work_dir="$(mktemp -d --suffix="-cachyos-iso")"
+if ! "$stage_only"; then
+    [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || die 'build on an x86_64 Linux host'
+    command -v mkarchiso >/dev/null || die 'install archiso on the build host'
+    (( EUID == 0 )) || die 'run the ISO build as root'
+    [[ -f /usr/share/pacman/keyrings/cachyos.gpg ]] || die 'install the CachyOS keyring on the build host'
+    for link in default.target display-manager.service multi-user.target.wants/NetworkManager.service; do
+        [[ -L "$iso_dir/airootfs/etc/systemd/system/$link" ]] || die "expected a Linux checkout with symlinks: $link"
+    done
 fi
 
-prepare_dir "${work_dir}"
+mkdir -p -- "$work_dir"
+work_dir=$(cd -- "$work_dir" && pwd)
+profile=$(mktemp -d -- "$work_dir/profile.XXXXXX")
 
-import ${src_dir}/util-iso.sh
-import ${src_dir}/util-iso-mount.sh
+cp -a -- "$iso_dir"/{profiledef.sh,packages.x86_64,pacman.conf,grub,airootfs} "$profile/"
+root="$profile/airootfs"
+install -m 0644 -- "$profile/pacman.conf" "$root/etc/pacman.conf"
 
-check_requirements
-
-for sig in TERM HUP QUIT; do
-    trap "trap_exit $sig \"$(gettext "%s signal caught. Exiting...")\" \"$sig\"" "$sig"
+# mkarchiso seeds liveuser's home from /etc/skel.
+skel="$root/etc/skel/.config"
+install -Dm644 -- "$repo_dir/desktop/hypr/hyprland.lua" "$skel/hypr/hyprland.lua"
+for app in mako swaylock waybar wlogout wofi; do
+    cp -a -- "$repo_dir/desktop/$app" "$skel/"
 done
-trap 'trap_exit INT "$(gettext "Aborted by user! Exiting...")"' INT
-trap 'trap_exit USR1 "$(gettext "An unknown error has occurred. Exiting...")"' ERR
-trap 'trap_exit EXIT "$(gettext "An unknown error has occurred. Exiting...")"' EXIT
 
-run_build "${build_list_iso}"
+printf 'Staged ConstOS profile: %s\n' "$profile"
+if "$stage_only"; then
+    exit 0
+fi
+
+mkdir -p -- "$out_dir"
+# mkarchiso caches build steps in its work directory. Each run gets a fresh one.
+mkarchiso_work=$(mktemp -d -- "$work_dir/mkarchiso.XXXXXX")
+exec mkarchiso "${options[@]}" -w "$mkarchiso_work" -o "$out_dir" "$profile"

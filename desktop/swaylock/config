@@ -1,16 +1,9 @@
-ignore-empty-password
 disable-caps-lock-text
-font=Cantarelle Regular
+font=Noto Sans
 
-screenshots
-effect-blur=7x5
-effect-vignette=0.5:0.5
-indicator
+color=161616
 indicator-radius=120
 indicator-thickness=20
-clock
-timestr=%I:%M %p
-datestr=%A, %d %B
 ring-color=00aa84
 key-hl-color=82dccc
 line-color=007d6f
