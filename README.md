@@ -23,39 +23,7 @@ ConstOS adalah distribusi Linux berbasis CachyOS untuk pengembangan perangkat lu
 
 ## Arsitektur dan status pengembangan
 
-Diagram berikut menunjukkan arsitektur yang dituju. Tabel di bawahnya membedakan komponen yang sudah disiapkan dari integrasi yang masih direncanakan atau perlu diuji.
-
-```mermaid
-flowchart TD
-    subgraph KernelSpace ["Kernel & Hardware (CachyOS)"]
-        CPU["CPU Scheduling<br/>(BORE / sched-ext)"]
-        MEM["Virtual Memory & Paging<br/>(ZRAM lz4/zstd + Swappiness Tuning)"]
-        FS["Storage & File System<br/>(Btrfs Subvolumes + CoW Snapshots)"]
-    end
-
-    subgraph SystemSpace ["System Layer & Daemons"]
-        ProcFS["/proc & /sys Virtual Filesystem"]
-        Systemd["systemd Services & User Units"]
-        ConstD["constd (OS-MCP Bridge Daemon)"]
-        Bwrap["Bubblewrap (bwrap) Sandbox"]
-    end
-
-    subgraph UserSpace ["Desktop Environment (Wayland)"]
-        Hyprland["Hyprland Window Manager"]
-        Harness["Const Harness AI Workbench"]
-        Ollama["Local LLM Engine (Ollama - Offline Fallback)"]
-    end
-
-    CPU --> ProcFS
-    MEM --> ProcFS
-    FS --> Systemd
-    ProcFS --> ConstD
-    ConstD --> Harness
-    Harness --> Bwrap
-    Bwrap --> SystemSpace
-    Hyprland --> Harness
-    Ollama --> Harness
-```
+Arsitektur komponen, batas izin, dan pemisahan profil live dari sistem terpasang dijelaskan di [docs/architecture.md](docs/architecture.md). Status berikut membedakan konfigurasi yang tersedia dari integrasi yang masih perlu dibuktikan.
 
 | Komponen | Status |
 | :--- | :--- |
@@ -64,6 +32,8 @@ flowchart TD
 | Storage dan recovery | Perkakas Btrfs dan Snapper masuk manifest. Penataan subvolume dan recovery pada sistem terpasang masih dalam pengembangan. |
 | Telemetri dan integrasi Harness | `constd` punya prototipe HTTP GET/JSON. Integrasi dengan Harness dan transport MCP masih direncanakan. |
 | Sandbox dan izin | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
+| Screenshot dan rekaman | Shortcut serta aksi Waybar untuk screenshot tersedia, tetapi belum tercatat teruji. Preview/anotasi, rekaman video, dan rekaman audio direncanakan di fase 07A roadmap. |
+| Shell, widget, dan aset | Konfigurasi desktop serta logo tersedia. Shell/Settings terpadu, katalog widget, aksesibilitas, dan pipeline aset masih dalam pengembangan. |
 
 ---
 
@@ -73,7 +43,7 @@ flowchart TD
 ConstOS/
 ├── assets/                        # Logo dan aset visual ConstOS
 ├── docs/                          # Arsitektur distro & panduan teknis
-│   ├── blueprint.md               # Rancangan arsitektur ConstOS
+│   ├── architecture.md            # Arsitektur, batas komponen, dan izin
 │   └── build-guide.md             # Panduan build ISO di lingkungan Arch/CachyOS
 ├── iso/                           # Mesin build ISO (Archiso + CachyOS profile)
 │   ├── buildiso.sh                # Skrip utama generator ISO
@@ -113,6 +83,8 @@ sudo bash iso/buildiso.sh -v
 ConstOS dikembangkan oleh Alif Constantine. Urutan integrasi, target rilis, dan kriteria verifikasi ada di [roadmap pengembangan](implementation_plan.md).
 
 ISO live sudah dibangun di Linux dan diuji di VM UEFI. Boot ke Hyprland, launcher, terminal, pengelola berkas, jaringan, ZRAM, dan console fallback berfungsi. Fokus berikutnya adalah Boot UI dan jalur instalasi ke disk.
+
+Panduan kontribusi agen ada di [AGENTS.md](AGENTS.md), dan prosedur kerja proyek diindeks di [SKILLS.md](SKILLS.md). Perubahan yang memengaruhi perilaku, arsitektur, atau cara kerja harus menyertakan pembaruan dokumen yang relevan; detail aturannya ada di AGENTS.md.
 
 ---
 

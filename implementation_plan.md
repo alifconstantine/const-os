@@ -12,6 +12,7 @@ ConstOS dikembangkan sebagai distro Linux untuk pengembangan perangkat lunak dan
 | Sesi live | QEMU/OVMF berhasil boot ke Hyprland dan Waybar. Foot, Wofi, Thunar, jaringan, ZRAM, dan console fallback sudah diuji. | Uji audio, portal, screenshot, dan lock. Audit sisa pengaturan khusus live sebelum membuat target terpasang. |
 | Sistem dan installer | Ada konfigurasi ZRAM/sysctl, paket Btrfs/Snapper, serta rancangan Calamares dan branding. | Wiring installer, layout disk, konfigurasi Snapper, rollback, dan reboot dari disk masih menjadi pekerjaan berikutnya. |
 | Telemetri dan AI | `constd` adalah prototipe HTTP GET/JSON lokal. Wrapper sandbox menolak eksekusi jika Bubblewrap tidak tersedia. Resep paket Harness ada di repo. | Ganti pembacaan metrik yang hardcode, satukan sumber `constd`, atur batas akses, dan pasang binary Harness yang benar. Profil live saat ini tidak mewajibkan Calamares, Harness, atau Ollama. |
+| Capture desktop | Lua Hyprland mengikat `Print` ke `slurp` + `grim` + `wl-copy`; Waybar punya aksi screenshot layar/area. | Belum ada bukti uji screenshot. Preview, simpan berkas, anotasi, rekaman video, dan rekaman audio belum menjadi alur produk yang teruji. |
 
 Smoke test memakai VM QEMU/OVMF dengan 4 vCPU dan 3 GiB RAM. Kernel `7.3.1-1-cachyos-bore` berjalan di sesi Wayland, `systemctl --failed` melaporkan 0 unit gagal, dan `journalctl` bisa dibuka dari console fallback. Nama host live masih `CachyOS`. Instalasi ke disk dan boot perangkat fisik masih perlu diuji. [Panduan build](docs/build-guide.md)
 
@@ -21,13 +22,27 @@ Smoke test memakai VM QEMU/OVMF dengan 4 vCPU dan 3 GiB RAM. Kernel `7.3.1-1-cac
 | --- | --- | --- |
 | **A · Live Alpha** | 01–02 | ISO dari checkout bersih, Boot UI dan console fallback bekerja di UEFI, aplikasi inti bisa dipakai dalam sesi live. |
 | **B · Installable Alpha** | 03–05 | Instalasi disk kosong, reboot tanpa ISO, desktop dengan konfigurasi yang bertahan, diagnosis dasar, dan panduan install/recovery yang dapat diikuti. |
-| **C · Desktop Beta** | 06–10 | Menu dan Settings dengan aksi nyata, widget, Dynamic Island opsional, serta hasil uji perangkat dan baseline performa. |
+| **C · Desktop Beta** | 06–10, termasuk 07A | Menu dan Settings dengan aksi nyata, screenshot, rekaman video/audio, widget, Dynamic Island opsional, serta hasil uji perangkat dan baseline performa. |
 | **D · Harness Beta** | 11–13 | Paket Linux Harness, monitor sistem, dan computer use lokal dengan scope, consent, Stop, dan batas kemampuan yang jelas. |
 | **E · ConstOS 1.0** | 14–15 | Paket dan ISO bertanda tangan, update/rollback teruji, hardware yang didukung terdokumentasi, dan batas Harness dibuktikan di sesi Wayland nyata. |
 
 Untuk 1.0, prioritaskan satu jalur resmi **UEFI x86_64 + Hyprland + CachyOS**. Jalur alpha memakai VM OVMF dan kemudian minimal satu laptop atau desktop fisik yang dicatat model GPU, storage, Wi-Fi, dan RAM-nya. Status NVIDIA, hybrid GPU, CPU lama, LUKS, dual boot, dan Secure Boot dilaporkan per skenario yang benar-benar lulus. Desktop dasar harus tetap bisa digunakan tanpa login Harness atau koneksi ke penyedia AI.
 
 Nomor fase adalah urutan integrasi. Desain aset, prototipe shell, dan dokumen bisa berjalan bersamaan setelah fondasi yang dipakai masing-masing tersedia. Lakukan probe portal begitu sesi Wayland pertama bisa berjalan. Hasilnya menentukan scope Harness Beta sebelum tim mengerjakan UI izin dan kontrol input.
+
+### Kontrak pelaksanaan
+
+Setiap item yang mulai dikerjakan harus mencatat pemilik perubahan, dependensi, paket/file yang terdampak, bukti penerimaan, dan blocker. Centang berarti skenario penerimaan sudah dijalankan pada build yang dicatat; keberadaan konfigurasi atau paket saja belum cukup. Simpan SHA, versi paket, profil VM/perangkat, perintah/skenario, hasil, serta lokasi log atau media yang sudah diperiksa privasinya. Jangan masukkan ISO, model, atau rekaman mentah ke Git.
+
+| Jalur | Dependensi dan prioritas |
+| --- | --- |
+| Live dan installer | P0: boot, console recovery, pemisahan live/installed, install, reboot, dan jalur update/recovery. Polesan visual tidak boleh menghalangi diagnosis atau instalasi. |
+| Settings dan Monitor | Fase 04 membuat kontrak state dan provider minimum yang dipakai UI; fase 08 memperluas collector dan Monitor. Jangan menunggu seluruh fase 08 untuk menyambungkan Settings ke data nyata. |
+| Capture pengguna | Screenshot dasar diuji di fase 02; fase 07A menyelesaikan UI serta rekaman video/audio sebelum Desktop Beta. Probe portal dilakukan lebih awal; fitur ini tidak menunggu Harness. |
+| Widget dan Island | Memakai sumber data fase 07–08. Island opsional dan tidak boleh menjadi satu-satunya tempat indikator rekaman atau tombol Stop. |
+| Harness | Probe observasi/izin Wayland boleh berjalan sejak live boot. Integrasi fase 11–13 tidak menghambat desktop, screenshot, atau perekam yang dipakai pengguna biasa. |
+
+Arsitektur dan batas kepercayaan ada di [docs/architecture.md](docs/architecture.md). Kebijakan perubahan dokumen ada di [AGENTS.md](AGENTS.md); prosedur kerja tersedia melalui [SKILLS.md](SKILLS.md).
 
 ## Temuan dari Ryoku dan Const Harness
 
@@ -55,16 +70,7 @@ Referensi ini memakai Ryoku `v1.0.7` (`f7197d72d`) dan Const Harness dari monore
 | Paket dan konfigurasi | Konfigurasi vendor dipasang lewat paket. Preferensi per-user memakai XDG config dengan schema versi. Data aplikasi, state, dan runtime dipisahkan. | Pakai paket yang sama untuk file yang memang dibagikan live/installed. Seeder hanya membuat file awal yang belum ada. Uji upgrade dari versi lama, config rusak, dan reset satu kelompok preferensi. |
 | Izin computer use | Harness membuka helper user-session yang ditentukan paket melalui inherited stdio. Helper menerima izin sementara dari UI/portal dan melakukan pemeriksaan scope untuk setiap aksi. | Validasi satu target app dan satu sesi per lease. Backend mendeteksi kemampuan aktual dan menyajikan opsi yang tersedia. Hak root, listener jaringan, dan akses input global tanpa consent berada di luar kontrak. [RemoteDesktop portal](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.RemoteDesktop.html) |
 
-```mermaid
-flowchart LR
-    ISO["Archiso + Calamares"] --> PKG["Paket ConstOS"]
-    PKG --> UI["Hyprland + shell/Settings"]
-    UI --> CORE["constosctl + constd Rust"]
-    CORE --> SYS["Kernel + layanan Linux"]
-    H["Const Harness"] --> CORE
-    H --> BROKER["Helper computer use Rust"]
-    BROKER --> PORTAL["AT-SPI + portal / PipeWire"]
-```
+Batas proses, kepemilikan konfigurasi, dan pemisahan capture pengguna dari computer use dijelaskan di [arsitektur ConstOS](docs/architecture.md). Tabel di atas mencatat keputusan yang harus dibuktikan selama integrasi, bukan daftar fitur yang semuanya sudah tersedia.
 
 Gunakan `iso/`, `installer/`, `desktop/`, dan `packages/` sesuai tanggung jawab saat ini. Tambahkan `system/` untuk kebijakan target, `crates/` untuk kode Rust, dan `tests/` untuk smoke test lintas komponen ketika masing-masing dibutuhkan. Sumber helper Linux diusulkan berada di ConstOS dan dikirim sebagai paket versi tersendiri. Monorepo Harness memiliki adapter konsumennya. Tetapkan satu artefak binary per versi untuk kedua repo.
 
@@ -92,6 +98,8 @@ Gunakan `iso/`, `installer/`, `desktop/`, dan `packages/` sesuai tanggung jawab 
 
 - [ ] Periksa launcher `.desktop`, nama icon, kategori, file yang dipasang, dan `mimeapps.list`. Pastikan setiap menu menunjuk ke executable yang benar. Pilih backend portal secara eksplisit per interface setelah menguji sesi yang diluncurkan SDDM. [Desktop Entry Specification](https://specifications.freedesktop.org/desktop-entry-spec/latest/) · [portals.conf](https://flatpak.github.io/xdg-desktop-portal/docs/portals.conf.html)
 - [ ] Definisikan service system dan user yang perlu aktif. Pisahkan autostart compositor dari service yang butuh supervisi. Impor env Wayland dari sesi aktual, hindari asumsi `wayland-1`, dan uji logout/login berulang agar proses panel, tray, dan notifikasi tidak ganda.
+- [ ] Uji baseline screenshot `Print` dan aksi Waybar: area yang dipilih sesuai hasil clipboard, Escape membatalkan tanpa menimpa clipboard, dan kegagalan tool terlihat. Catat perbedaan konfigurasi Lua yang di-stage dengan konfigurasi `.conf` lama; hanya jalur yang benar-benar dimuat boleh diklaim didukung.
+- [ ] Uji input teks beraksen/non-Latin, font fallback, pemilihan layout, mount/eject media lepas-pasang, trash, secret agent, dan dialog otorisasi dari sesi SDDM. Pilih paket tambahan berdasarkan skenario yang didukung; jangan menganggap toolkit otomatis menyelesaikan integrasi sesi.
 
 **Fase lulus jika** live VM bisa membuka halaman lokal dari browser, mengakses file dan arsip, menyalin teks/gambar, memindah audio output, dan menjalankan diagnosis dasar. Catat paket opsional dan pengaruhnya pada ukuran ISO.
 
@@ -121,6 +129,7 @@ Gunakan `iso/`, `installer/`, `desktop/`, dan `packages/` sesuai tanggung jawab 
 
 - [ ] Buat kontrak bertipe untuk nilai, capability, perubahan, dan error. UI hanya menawarkan aksi yang valid untuk hardware dan sesi. Simpan user prefs dengan penulisan atomik dan migrasi schema yang bisa diuji ulang. Sediakan reset per bagian dan back up preferensi lama sebelum migrasi.
 - [ ] Gunakan provider yang sudah menguasai subsistem melalui API atau adaptor sempit. Jalankan perubahan tingkat user dalam sesi. Untuk aksi sistem yang dipilih, pakai mekanisme otorisasi per operasi dan tampilkan kegagalan tanpa mengubah status UI menjadi sukses.
+- [ ] Definisikan provider minimum dan schema state sebelum spike UI: capability, nilai aktual, aksi pending, error, dan resync. UI tidak membaca metrik hardcode atau menjalankan string shell dari input pengguna. Perluas kontrak ini di fase 08, bukan membuat collector kedua.
 
 **Fase lulus jika** halaman Settings dapat apply/cancel dan mengembalikan layout display. Uji restart sesi, pengguna kedua, preferensi rusak, hardware hilang, dan perubahan dari luar UI. Pakai kontrak state yang sama untuk menu cepat ketika menu itu dihubungkan di fase 07.
 
@@ -130,6 +139,7 @@ Gunakan `iso/`, `installer/`, `desktop/`, dan `packages/` sesuai tanggung jawab 
 - [ ] Buat panduan pengembangan untuk layout repo, pengiriman file via paket, pemisahan overlay live dan target, schema Settings, dan cara menjalankan tes VM. Simpan keputusan besar seperti pilihan shell, filesystem, dan provider computer use dengan pilihan, konsekuensi, dan hasil uji.
 - [ ] Rapikan lisensi proyek dan inventaris komponen/aset. Saat mengadaptasi kode atau tema dari Ryoku, CachyOS, atau repo lain, catat path sumber, commit/tag, notice, lisensi, dan perubahan yang dibuat. Catat juga asal serta izin redistribusi font, icon, wallpaper, dan binary yang dipaketkan.
 - [ ] Sediakan panduan pengguna dan pengembang dalam bahasa Indonesia, serta English untuk antarmuka/help utama. Petakan dokumen dukungan ke log yang dibutuhkan dan cara meredaksi nama pengguna, token, SSID, dan path sensitif.
+- [ ] Terapkan matriks sinkronisasi di [AGENTS.md](AGENTS.md) sejak perubahan pertama, bukan menunggu fase dokumentasi selesai. README menyimpan status pengguna, roadmap menyimpan pekerjaan/bukti, arsitektur menyimpan batas komponen, dan skill menyimpan prosedur. Perbarui hanya sumber yang terdampak dalam perubahan yang sama.
 
 **Fase lulus jika** pengguna atau kontributor baru mengikuti panduan dari clone atau ISO baru hingga login dan bisa menemukan prosedur diagnosis/recovery. Catat langkah yang gagal dan perbaiki dokumentasinya sebelum memberi label Installable Alpha.
 
@@ -138,7 +148,10 @@ Gunakan `iso/`, `installer/`, `desktop/`, dan `packages/` sesuai tanggung jawab 
 - [ ] Turunkan token ConstOS dari arah studio Harness dan logo yang sudah ada. Mulai dari canvas `#161616`, surface bertingkat, teks terang, satu aksen fungsional, radius, skala spacing, tipografi, fokus, dan durasi motion. Definisikan state hover, pressed, focused, pending, disabled, error, offline, dan selected. Terapkan tema lintas GTK, Qt, Foot, SDDM, dan shell sesuai kemampuan masing-masing toolkit.
 - [ ] Buat wireframe yang saling terhubung untuk **Launcher**, **Quick Settings**, **Notification Center**, **Workspace/Tray**, **Power/Session**, **Desktop Context Menu**, dan **Welcome**. Bedakan permukaan yang selalu terlihat, yang muncul atas interaksi, dan yang boleh mengambil keyboard focus. Gunakan satu skala dan satu aturan closing lewat Escape atau klik luar.
 - [ ] Pakai ImageGen nanti untuk eksplorasi wallpaper, tekstur, ilustrasi onboarding, dan latar boot/login. Simpan shortlist dan render final yang disetujui. Pakai vektor yang terbaca untuk ikon aksi serta logo, dengan raster fallback jika format boot membutuhkannya. Ekspor varian light/dark, crop untuk layar berbeda, dan ukuran yang sesuai target.
-- [ ] Catat provenance, peran aset, source yang dapat disunting, file ekspor, ukuran, serta lisensinya. Uji keterbacaan teks di atas aset, ukuran initramfs, tampilan 100–200% scaling, tema terang/gelap, dan reduced motion. CI mengambil aset yang dikomit agar build tidak bergantung pada layanan generasi gambar.
+- [ ] Tetapkan manifest aset berisi ID stabil, pemilik paket, penggunaan, sumber/versi, lisensi/izin redistribusi, file editable, ekspor, dimensi, dan varian. Audit juga logo yang sudah ada; sumber yang belum diketahui dicatat sebagai blocker rilis, bukan diberi lisensi asumsi. Uji keterbacaan teks, kontras, font/cursor/icon fallback, ukuran initramfs, dan tampilan 100–200% scaling. Pastikan aset tersedia dalam paket serta initramfs yang memakainya.
+- [ ] Buat katalog surface dan state untuk greeter, lockscreen, launcher, panel, Settings, dialog izin, capture toolbar/preview, recorder, pemilih widget, OSD volume/brightness, serta notifikasi. Catat aksi masuk/keluar, pemilik fokus, Escape/Back, tab order, state loading/error/denied, dan perilaku saat monitor hilang. Review alur lengkap, bukan hanya screenshot layar utama.
+- [ ] Uji aksesibilitas spike QML sebelum mengunci toolkit: nama/role kontrol, fokus terlihat, keyboard-only, pembaca layar, kontras, ukuran teks besar, dan reduced motion. Jika jalur aksesibilitas gagal, evaluasi toolkit alternatif sebelum memperluas shell. String UI harus dapat diterjemahkan dan diuji dengan label panjang.
+- [ ] Versikan token desain dan aturan ekspor. Paket memasang default vendor; wallpaper atau tema pilihan pengguna tidak ditimpa update. Build memakai ekspor yang dikomit dan tidak membutuhkan akun atau layanan generasi gambar.
 
 **Fase lulus jika** review screenshot atau prototype mencakup boot, greeter, desktop, launcher, dan Settings dalam satu alur. Sediakan desain untuk state kosong, error, panjang teks terjemahan, keyboard-only, dan monitor kecil sebelum komponen dipoles.
 
@@ -151,11 +164,34 @@ Gunakan `iso/`, `installer/`, `desktop/`, dan `packages/` sesuai tanggung jawab 
 | Notification Center | Tampilkan notifikasi, aksi asal, dismiss, dan DND. Pilih satu pemilik `org.freedesktop.Notifications` per sesi. Riwayat lokal punya batas dan dapat dihapus. |
 | Workspace, tray, context | Pindah workspace, buka item tray, menu desktop untuk wallpaper/widgets/Settings, dan menu aplikasi dengan aksi yang didukung. Adapter Hyprland membaca event dan melakukan resync setelah compositor restart. |
 | Power & Welcome | Lock, logout, suspend, reboot, shutdown dengan state capability dan konfirmasi yang sesuai. Welcome memberi shortcut dasar, pilihan tema/scale, tautan help, dan opsi untuk dilewati atau dibuka lagi. |
+| Clipboard dan OSD | Pilih/paste/hapus item teks atau gambar dari UI dengan batas riwayat, opsi menonaktifkan penyimpanan, dan clear. Jangan tampilkan riwayat di lockscreen. OSD volume, mute, dan brightness mengikuti state backend tanpa mencuri fokus. |
+| Capture | Shortcut, launcher, dan panel membuka alur screenshot atau recorder yang sama. Panel menampilkan sumber, durasi, mute, dan Stop berdasarkan status nyata dari fase 07A. |
 
 - [ ] Bagikan registry aksi dan state dengan Settings, keybind, widget, serta Island. Gunakan ID aksi dan parameter tervalidasi, dengan label terjemahan terpisah. Aksi UI memanggil adapter yang punya batas, agar string pencarian dan isi notifikasi tidak menjadi perintah shell.
 - [ ] Pindahkan satu permukaan pada satu waktu dari Waybar, Wofi, atau Mako setelah pengganti lolos tes. Sediakan sesi fallback untuk pemulihan dari TTY. Pastikan applet tray, auth agent, dan notification daemon hanya dimulai sekali.
 
 **Fase lulus jika** setiap item yang terlihat punya fungsi atau alasan disabled, hasilnya tampil kembali di UI, dan fokus pulih ke aplikasi sebelumnya setelah panel ditutup. Uji input cepat, monitor dicabut, daemon restart, izin ditolak, serta bahasa dengan label panjang.
+
+## Fase 07A · Screenshot, rekaman video, dan rekaman audio
+
+Ini fitur pengguna desktop, terpisah dari observasi agen di fase 12. Gunakan aplikasi/backend Wayland yang sudah tersedia sebelum menulis encoder atau layanan capture sendiri. `grim`/`slurp` adalah baseline screenshot saat ini; kandidat recorder dipilih setelah uji portal, audio, format, dan konsumsi resource pada build target. Tidak ada dukungan window/region, pause, encoder hardware, atau audio sistem yang diklaim hanya karena paket terpasang.
+
+| Alur | Kontrak pengguna dan bukti penerimaan |
+| --- | --- |
+| Screenshot | Pilih layar, window, atau area sejauh backend mendukung; opsi cursor dan countdown; Escape membatalkan. Preview menyediakan copy, simpan PNG, buka folder, serta anotasi crop/panah/teks/redaksi melalui editor yang dipilih. Redaksi harus menjadi piksel pada berkas ekspor, bukan layer yang bisa dibuka lagi. Cocokkan isi/dimensi hasil dengan target, termasuk dua monitor, skala campuran, dan koordinat negatif. Mode tak didukung tidak ditawarkan. |
+| Rekaman video | Pilih sumber dan kualitas/resolusi/FPS dari kemampuan aktual; tampilkan countdown, indikator aktif, durasi, dan Stop. Pause/resume hanya ditawarkan bila backend mendukung. Pilihan audio terpisah: tanpa audio, mikrofon, audio sistem, atau keduanya jika tersedia. Setelah Stop, tunggu finalisasi lalu buka hasil dari file manager dan putar video/audio untuk memeriksa durasi, frame, serta sinkronisasi A/V. |
+| Rekaman audio | Alur audio-only tidak meminta izin layar. Pilih mikrofon atau sumber audio sistem yang tersedia, tampilkan level input, mute, durasi, dan Stop; kontrol gain memakai sumber perangkat yang sesuai. Pilih format ekspor serta sample rate/channel yang benar-benar didukung. Putar ulang hasil dan periksa channel, durasi, clipping, dan sumber yang direkam. |
+| Penyimpanan dan berbagi | Gunakan direktori XDG Pictures/Videos/Music dengan subfolder ConstOS yang terlihat dan dapat diubah; jika belum dikonfigurasi, tawarkan lokasi simpan. Nama unik tanpa overwrite diam-diam, pratinjau lokasi, buka folder, dan copy sesuai tipe hasil. Hasil tetap lokal; upload dan pengiriman ke Harness membutuhkan tindakan serta izin terpisah. |
+
+- [ ] Pilih satu jalur resmi untuk screenshot + editor, video recorder, dan audio recorder. Catat versi, paket, lisensi/codec, portal/direct-compositor access, dan alasan pilihan. Uji software encoding sebagai baseline; opsi hardware hanya masuk dukungan setelah diverifikasi. Jangan menambah dependensi aplikasi besar ke ISO tanpa mencatat ukurannya.
+- [ ] Tetapkan pemilik sesi recorder dengan status `idle`, `selecting`, `countdown`, `recording`, `paused` bila didukung, `stopping`, `finalizing`, `completed`, `cancelled`, dan `failed`. Transisi mengikuti backend; Cancel tidak sama dengan sukses dan Stop belum berarti berkas siap. Batasi satu sesi rekaman yang dikelola UI per pengguna; percobaan kedua menawarkan kembali ke sesi aktif, bukan membuat proses tersembunyi.
+- [ ] Pisahkan izin layar, mikrofon, audio sistem, dan akses berkas. Portal menampilkan picker untuk jalur yang memakainya; shortcut screenshot compositor harus dijelaskan sebagai akses sesi lokal, bukan dianggap dibatasi portal. Rekaman pengguna tidak memberi grant computer use kepada agen. Indikator/Stop harus tetap bisa dijangkau tanpa Island dan tanpa jendela recorder mendapat fokus.
+- [ ] Saat lock atau logout dimulai, hentikan capture dan lepaskan akses sumber; finalisasi hasil yang sudah diperoleh jika memungkinkan. Revoke menghentikan sumber terkait; kehilangan sumber wajib menghentikan rekaman dengan alasan yang jelas. Jangan beralih ke mikrofon/output lain secara diam-diam dan jangan melanjutkan rekaman otomatis setelah unlock/relogin. Pada suspend atau crash, dokumentasikan apakah hasil parsial dapat dipulihkan.
+- [ ] Tangani picker ditolak/dibatalkan, portal/encoder mati, device unplug, monitor dicabut, direktori tidak writable, disk penuh, dan kegagalan finalisasi. Jangan menampilkan notifikasi sukses sebelum berkas valid. Hapus sementara yang tidak diperlukan, tetapi jangan membuang hasil parsial yang bisa dipulihkan tanpa memberi pilihan. Stream/frame/audio mentah tidak masuk log diagnosis.
+- [ ] Sambungkan shortcut yang tidak bentrok, launcher, panel, Settings capture, dan notifikasi hasil. Sembunyikan toolbar/preview dari hasil bila backend mendukung dan buktikan; jangan menjanjikan pembersihan notifikasi aplikasi lain dari frame. Screen sharing browser/meeting diuji terpisah dari rekaman berkas, termasuk pemakaian bersamaan dan konflik perangkat.
+
+**Fase lulus jika** screenshot bisa disalin/disimpan/dianotasi; video tanpa audio dan setiap mode audio yang didukung dapat diputar ulang; audio-only merekam sumber yang dipilih tanpa izin layar. Uji izin ditolak, cancel, Stop, lock/logout, revoke, disk penuh, perangkat hilang, restart recorder, dua monitor, dan fractional scaling. Catat hasil pada sesi live dan installed; skenario yang gagal memblokir label dukungannya. Desktop Beta memerlukan jalur screenshot, video, dan audio-only dasar yang teruji; Harness tidak menjadi prasyarat.
+
 
 ## Fase 08 · System Monitor, Doctor, dan widget
 
@@ -173,6 +209,9 @@ Sumber metrik dan batasnya dicatat bersama setiap collector. [Dokumentasi /proc]
 - [ ] **Doctor.** Mulai baca-saja untuk unit gagal, versi kernel, display/session, portal, audio, jaringan, ruang disk, ZRAM, dan snapshot. Laporkan status, bukti, serta tindakan pemulihan yang dapat dipilih pengguna. Diagnostic bundle harus bisa dipreview dan meredaksi data pribadi sebelum dibagikan.
 - [ ] **Widget tahap pertama.** Jam/tanggal, battery, jaringan, media MPRIS, dan CPU/RAM/ZRAM. Tambah widget disk dan aktivitas Harness setelah sumber datanya tersedia. Satu collector/subscription melayani panel, widget, dan Monitor. Gunakan event jika tersedia, kurangi sampling saat tersembunyi, dan berhenti ketika widget dihapus.
 - [ ] Simpan posisi, ukuran, visibility, dan output. Batasi drag/resize ke work area. Jika monitor dilepas, pindahkan widget ke fallback yang dapat dijangkau. Sediakan preview, undo/reset layout, dan kontrol keyboard. Data privat seperti judul media atau task bisa disembunyikan di layar terkunci atau saat berbagi layar.
+- [ ] Tetapkan katalog widget bawaan: jam/tanggal, battery, jaringan, media, dan metrik sistem di atas. Tiap widget punya ID stabil, schema preferensi/versi, sumber data, aksi yang diizinkan, refresh policy, serta state unavailable/error. Kalender, timer, disk, dan aktivitas Harness hanya ditambahkan saat backend masing-masing tersedia; jangan membuat nilai contoh terlihat sebagai data pengguna.
+- [ ] Sediakan pemilih widget dengan tambah/hapus, konfigurasi, reorder, resize bila didukung, preview, dan reset. Bedakan instance widget dari jenisnya. Migrasikan layout per-user tanpa duplikasi ketika output berubah, saat upgrade, atau saat konfigurasi rusak; pengguna kedua tidak mewarisi data pribadi pengguna pertama.
+- [ ] Widget bawaan hanya memakai adapter yang ditentukan paket, bukan string perintah bebas. Konten widget bukan otorisasi aksi sistem. Kegagalan satu provider menampilkan error lokal tanpa menjatuhkan shell. Plugin pihak ketiga tidak masuk dukungan 1.0 sampai format, izin, kompatibilitas, dan isolasinya diputuskan.
 
 **Fase lulus jika** metrik sesuai dengan `btop`, `free`, `zramctl`, `findmnt`, dan sumber kernel yang sesuai pada interval pengukuran yang dicatat. Uji data kosong, hardware yang tidak didukung, proses yang keluar, service mati, widget yang ditutup, dan reboot yang mempertahankan layout.
 
@@ -198,6 +237,7 @@ Mulai sebagai surface yang opsional dengan pola interaksi ConstOS. Saat referens
 
 - [ ] Buat baseline sebelum dan sesudah shell baru di perangkat yang sama. Rekam kernel, compositor, versi paket, mode power, driver, resolusi, dan profil VM. Ukur cold boot hingga desktop siap, PSS sesi idle, CPU dan wakeups, latency launcher/Settings, frame pacing Island, dan idle/suspend drain pada laptop. Ambil beberapa run dan catat median serta sebarannya.
 - [ ] Bandingkan desktop fallback dengan shell baru, Harness aktif/nonaktif, serta idle/beban kompilasi/pressure memori. Tetapkan budget awal setelah ada hasil. Pisahkan biaya kompresi, sampling, animasi, dan proses Electron. Optimasi event subscription, wakeups, serta polling tersembunyi sebelum mengubah tuning kernel.
+- [ ] Ukur screenshot serta rekaman video/audio sambil memakai desktop: CPU/GPU, memori, frame drop, sinkronisasi A/V, ukuran berkas per menit, dan respons Stop. Catat codec/resolusi/FPS/sumber audio dan driver; tentukan preset default dari hasil di hardware minimum. Widget tersembunyi dan rekaman yang sudah berhenti tidak boleh menyisakan polling atau proses encoder aktif.
 - [ ] Uji ZRAM dan sysctl di VM dengan RAM terbatas dan satu perangkat fisik. Bandingkan pressure, jumlah swap, biaya RAM terkompresi, dan respons aplikasi. Catat nilai dari CachyOS dan override ConstOS yang betul-betul efektif. Terapkan tuning berbeda jika datanya mendukung perubahan itu.
 - [ ] Kelola satu kebijakan power profile. Uji CPU governor yang disediakan perangkat, brightness, battery, idle, suspend/resume, audio setelah wake, display dan Wi-Fi. Untuk proses latar seperti Harness, evaluasi batas CPU/I/O/memori per unit user dengan cgroup v2 setelah ada beban nyata. Hindari pembatasan yang memutus kerja pengguna tanpa indikator. [cgroup v2](https://docs.kernel.org/admin-guide/cgroup-v2.html)
 - [ ] Pertahankan pemilihan kernel dan repo generik saat memvalidasi hardware. Tambahkan fallback kernel atau tier CPU melalui keputusan yang memeriksa dukungan instruksi, driver, initramfs, dan rollback. Dokumentasikan kombinasi GPU dan firmware yang diketahui bermasalah. [Varian kernel CachyOS](https://wiki.cachyos.org/features/kernel/)
@@ -233,7 +273,7 @@ Rust helper berjalan di sesi pengguna. Akses dibedakan per capability antara **m
 - [ ] **Integrasi agen.** Tampilkan scope, status, dan perubahan di workbench. Untuk MCP, expose metrik baca-saja lebih dulu melalui adapter lokal yang benar-benar menjalankan handshake dan schema tool. Tool computer use lewat kebijakan broker yang sama. Nonaktifkan jalur remote/unattended untuk kontrol desktop pada rilis awal. Aksi destruktif, pembayaran, kredensial, sistem privilege, dan secure desktop berada di luar kapabilitas rilis awal.
 - [ ] **Uji keselamatan.** Pakai aplikasi fixture dengan perubahan yang bisa diverifikasi. Uji salah target, popup asing, jendela pindah, multi-monitor skala campuran, izin ditolak, cancel saat aksi pending, timeout setelah aksi, aplikasi mati, dan sesi terkunci. Bukti keberhasilan berasal dari state aplikasi setelah aksi.
 
-**Fase lulus jika** Harness menyelesaikan satu tugas lokal pada aplikasi fixture dan satu aplikasi sehari-hari yang tercatat didukung, dengan persetujuan, hasil terverifikasi, dan Stop efektif. Jika hanya aksi semantik yang lulus, cakupan itu menjadi dukungan resmi dan input global berstatus eksperimental.
+**Fase lulus jika** Harness menyelesaikan satu tugas lokal pada aplikasi fixture dan satu aplikasi sehari-hari yang tercatat didukung, dengan persetujuan, hasil terverifikasi, dan Stop efektif. Jika hanya aksi semantik yang lulus, cakupan itu menjadi dukungan resmi. Jalur input yang tidak bisa menegakkan scope atau consent tetap dinonaktifkan, bukan ditawarkan sebagai mode eksperimental.
 
 ## Fase 14 · Paket distribusi, update, dan rollback
 
@@ -251,11 +291,14 @@ Rust helper berjalan di sesi pengguna. Akses dibedakan per capability antara **m
 | Build dan boot | CI Linux menghasilkan ISO dari commit/tag, log tersimpan, SHA diverifikasi, UEFI VM dan satu perangkat fisik mencapai sesi, dan console recovery bekerja. |
 | Install dan storage | Disk baru berhasil diinstal dan reboot tanpa ISO. Instalasi menyimpan akun dan layout yang benar. Snapshot, rollback, dan upgrade diuji. Skenario LUKS/offline/dual boot masuk daftar dukungan setelah memiliki bukti sendiri. |
 | Desktop dan perangkat | Login/logout, launcher, semua aksi menu, display revert, file/MIME, audio, Wi-Fi, lock dan suspend diuji pada perangkat yang sesuai. Sertakan dua monitor, fractional scaling, keyboard-only, dan reduced motion untuk shell. |
+| Capture dan privasi | Screenshot tersimpan/clipboard/anotasi benar, hasil rekaman video dan audio dapat diputar ulang, sumber serta sinkronisasi benar, dan Stop/lock/revoke melepas akses. Uji cancel/denied, disk penuh, device hilang, dua monitor, dan skala campuran; tidak ada upload otomatis. |
+| UI, widget, dan aset | Alur capture/Settings/shell bisa dipakai dengan keyboard dan aksesibilitas yang didukung; widget bertahan setelah upgrade/hotplug tanpa kebocoran antar-user. Semua aset yang dipakai tersedia, punya asal/lisensi, dan lolos pemeriksaan kontras serta skala. |
 | Metrik dan performa | Collector diverifikasi terhadap sumber kernel. Baseline mencakup boot, PSS/CPU idle, respons UI, pressure memori, dan beban kompilasi. Catat regresi serta hasil keputusan per build. |
 | Harness dan izin | Paket berjalan di target. Demo memperlihatkan izin, observasi, aksi yang didukung, verifikasi hasil, Stop, dan penolakan di luar scope. Distro juga berfungsi saat Harness tidak dipasang. |
 | Distribusi dan dukungan | ISO/paket bertanda tangan, checksum, release notes, known issues, hardware matrix, panduan install/update/recovery, inventaris lisensi, serta prosedur laporan bug dan keamanan tersedia. |
 
 - [ ] Jalankan rilis kandidat di disk bersih dan pada versi sebelumnya. Bekukan perubahan UI selama verifikasi. Lakukan sign-off berdasarkan hasil tiap baris dan catat kegagalan penghalang rilis. Perbaiki kandidat, buat artefak baru, lalu ulangi tes yang terdampak.
+- [ ] Tetapkan pemilik triage rilis dan jalur pelaporan bug/keamanan, masa dukungan artefak, retensi bukti uji, serta kebijakan refresh ISO pada basis rolling. Cocokkan README, roadmap, arsitektur, panduan, dan prosedur skill dengan perilaku kandidat. Dokumen yang kontradiktif atau klaim dukungan tanpa bukti memblokir publikasi.
 - [ ] Verifikasi alur sistem pada kandidat rilis: monitor menampilkan state dan usage CPU nyata, ZRAM aktif dengan statistik aktual, recovery memulihkan perubahan dari snapshot, Monitor/Harness menerima data lokal, dan sandbox menolak operasi di luar izin. Pastikan sesi computer use berhenti setelah revoke. Catat hasil serta batas dukungannya dalam release notes.
 - [ ] Publikasikan tag rilis, ISO, checksum/tanda tangan, paket, dan catatan rilis. Verifikasi download dari luar host build, instalasi baru, dan jalur update. Gunakan label dukungan yang sama di README, installer, dan Settings.
 
@@ -270,5 +313,6 @@ Rust helper berjalan di sesi pengguna. Akses dibedakan per capability antara **m
 | 3 | Tambahkan tema GRUB ConstOS dan entry diagnostics yang mudah dibaca. | Uji keyboard, timeout, normal boot, dan fallback. |
 | 4 | Integrasikan Plymouth statis, lalu tema SDDM sebagai perubahan terpisah. | Uji tiap tahap tanpa mengaburkan log atau prompt, dan bandingkan durasi boot. |
 | 5 | Lengkapi paket aplikasi bawaan dan uji launcher, file/MIME, audio, dan portal. | Satu sesi live yang dapat dipakai untuk alur dasar. Mulai installer setelah baseline ini jelas. |
+| 6 | Validasi screenshot dasar dan probe portal/audio untuk memilih backend fase 07A. | Isi clipboard sesuai area pilihan; cancel aman; laporan capability recorder dan audio tanpa klaim dukungan yang belum diuji. |
 
 Keputusan yang masih perlu data adalah daftar hardware yang akan didukung, pilihan aplikasi harian, aset Boot UI final, dan backend yang menyediakan cakupan input Wayland. Repo Dynamic Island Windows akan masuk review desain pada fase 09 setelah tautannya tersedia. Pemilihan toolkit shell dan migrasi host Harness dicatat sebagai keputusan berbasis spike agar pekerjaan yang sudah berfungsi tetap bisa dipakai selama pengembangan.
