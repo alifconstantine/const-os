@@ -1,6 +1,6 @@
 # ConstOS · Roadmap Pengembangan
 
-**Baseline 6 November 2026** · CachyOS x86_64, UEFI, Hyprland/Wayland
+**Baseline 7 November 2026** · CachyOS x86_64, UEFI, Hyprland/Wayland
 
 ConstOS dikembangkan sebagai distro Linux untuk pengembangan perangkat lunak dan penggunaan desktop sehari-hari, dengan sistem yang bisa dipasang, diperbarui, dan dipulihkan serta antarmuka monokrom yang konsisten sejak boot. Const Harness menambah workbench dan akses lokal ke desktop dengan izin pengguna. Roadmap dimulai dari Boot UI dan berakhir saat artefak rilis, jalur update, dan recovery sudah teruji.
 
@@ -8,13 +8,28 @@ ConstOS dikembangkan sebagai distro Linux untuk pengembangan perangkat lunak dan
 
 | Bagian | Yang sudah dikerjakan | Yang perlu dibuktikan atau dilengkapi |
 | --- | --- | --- |
-| Build ISO | Profil Archiso berhasil dibangun di Linux. GRUB UEFI dan initramfs memakai kernel BORE. Profil mempertahankan metadata rilis ConstOS saat paket basis dipasang. | Ulangi build dan smoke test di CI. Uji boot pada perangkat fisik. |
-| Sesi live | QEMU/OVMF berhasil boot ke Hyprland dan Waybar. Foot, Wofi, Thunar, jaringan, ZRAM, dan console fallback sudah diuji. | Uji audio, portal, screenshot, dan lock. Audit sisa pengaturan khusus live sebelum membuat target terpasang. |
+| Build ISO | Profil Archiso berhasil dibangun di Linux. Wrapper build mencatat checkout bersih, symlink staging, versi paket, log, dan checksum. Runner Live UEFI serta workflow Linux manual tersedia. | Jalankan workflow pada runner GitHub tepercaya yang sudah dikonfigurasi. Uji boot pada perangkat fisik. |
+| Sesi live | Boot QEMU/OVMF ke Hyprland/Waybar, tiga shortcut, DHCP, ZRAM, dan jurnal console fallback sudah diuji ulang lewat runner. | Uji audio, portal, screenshot, lock/logout, serta file/MIME. Audit sisa pengaturan khusus live sebelum membuat target terpasang. |
 | Sistem dan installer | Ada konfigurasi ZRAM/sysctl, paket Btrfs/Snapper, serta rancangan Calamares dan branding. | Wiring installer, layout disk, konfigurasi Snapper, rollback, dan reboot dari disk masih menjadi pekerjaan berikutnya. |
 | Telemetri dan AI | `constd` adalah prototipe HTTP GET/JSON lokal. Wrapper sandbox menolak eksekusi jika Bubblewrap tidak tersedia. Resep paket Harness ada di repo. | Ganti pembacaan metrik yang hardcode, satukan sumber `constd`, atur batas akses, dan pasang binary Harness yang benar. Profil live saat ini tidak mewajibkan Calamares, Harness, atau Ollama. |
 | Capture desktop | Lua Hyprland mengikat `Print` ke `slurp` + `grim` + `wl-copy`; Waybar punya aksi screenshot layar/area. | Belum ada bukti uji screenshot. Preview, simpan berkas, anotasi, rekaman video, dan rekaman audio belum menjadi alur produk yang teruji. |
 
-Smoke test memakai VM QEMU/OVMF dengan 4 vCPU dan 3 GiB RAM. Kernel `7.3.1-1-cachyos-bore` berjalan di sesi Wayland, `systemctl --failed` melaporkan 0 unit gagal, dan `journalctl` bisa dibuka dari console fallback. Nama host live masih `CachyOS`. Instalasi ke disk dan boot perangkat fisik masih perlu diuji. [Panduan build](docs/build-guide.md)
+Smoke manual pada 6 November memakai VM QEMU/OVMF dengan 4 vCPU dan 3 GiB RAM. Kernel `7.3.1-1-cachyos-bore` berjalan di sesi Wayland, `systemctl --failed` melaporkan 0 unit gagal, dan `journalctl` bisa dibuka dari console fallback. Nama host live masih `CachyOS`. Instalasi ke disk dan boot perangkat fisik masih perlu diuji. [Panduan build](docs/build-guide.md)
+
+### Bukti smoke otomatis · 7 November 2026
+
+Pelaksana: agen pengembangan pada sesi ini. Dependensi: host Linux dengan Archiso/keyring siap, checkout Git bersih, QEMU/OVMF, modul virtio, Python, dan OCR. Implementasi berada di `tests/live/`, `.github/workflows/live-uefi.yml`, dan `.github/actionlint.yaml`; tidak ada perubahan pada overlay live, menu GRUB, atau konfigurasi desktop.
+
+| Bukti | Hasil dan lokasi lokal |
+| --- | --- |
+| Sumber build | `f395e17064b5eacc5f9f0139f7362d1174c998c1`: commit snapshot QA bersih dari baseline repo `02ea3e4` ditambah implementasi smoke awal, **bukan commit pada branch pengguna**. Snapshot disimpan sebagai `iso/out/live-smoke-20261107/qa-source.bundle`; hash runner/probe yang dieksekusi dicatat terpisah dalam summary. |
+| Build Linux | Arch Linux x86_64 dalam VM, kernel builder `7.2.14-arch1-1`, Archiso `92-1`; seluruh symlink overlay terlacak lolos staging dan build penuh exit 0. Metadata, versi paket, dan log ada di `iso/out/live-smoke-20261107/`. |
+| Artefak | `constos-2026.11.07-x86_64.iso`, SHA-256 `5404cd4ea9978e82bd1c05a54cf1643123908f990d0999b8421d0d06d8f7c7f5`. Checksum dicocokkan dengan metadata sebelum boot. |
+| Smoke QEMU/WHPX | Dua cold boot UEFI dengan 4 vCPU, 6 GiB RAM, grafis virtio, tanpa disk target: desktop dan console fallback lulus. Kernel live `7.3.1-1-cachyos-bore`; Foot, Wofi, Thunar, symlink systemd, nol unit gagal, DHCP, ZRAM `zstd`, dan pembacaan jurnal boot saat ini lulus. Bukti final di `iso/out/live-smoke-20261107/smoke-final/`; screenshot desktop, launcher, Thunar, dan TTY diperiksa. Input QMP memakai pasangan event tekan/lepas eksplisit, bukan timer pelepasan tombol virtual. |
+| Penolakan | Checkout kotor ditolak dengan exit 1 dan metadata failure tanpa ISO; metadata dengan checksum ISO salah ditolak sebelum VM dijalankan. Bukti wrapper final ada di `iso/out/live-smoke-20261107/dirty-checkout-final.json`. |
+| Native Linux/TCG — belum lulus | Builder tidak menyediakan akses `/dev/kvm`. QEMU Linux memerlukan modul virtio GPU dan VGA yang sudah ditambahkan ke prasyarat panduan. Percobaan TCG bertingkat terakhir berhenti sebelum probe setelah 900 detik; layar menunjukkan kegagalan `systemd-nsresourced`, `timesyncd`, dan job device node yang tidak selesai. Diagnostik ada di `iso/out/live-smoke-20261107/smoke-linux-input-events/`; ini bukan bukti kelulusan Linux/KVM atau masalah yang sudah diisolasi ke kode distro. |
+
+Workflow GitHub dan smoke Linux/KVM belum dieksekusi; perlu host yang memberi user runner akses `/dev/kvm`, label `constos-build`, keyring tepercaya, serta repository variables untuk pasangan firmware. Workflow menolak KVM yang tidak tersedia dan tidak beralih ke TCG. ShellCheck dan actionlint lulus pada konfigurasi runner yang terdaftar; preflight runner menolak KVM yang tidak tersedia dengan exit 2. Hasil VM tidak membuktikan perangkat fisik, audio, portal, lock/logout, screenshot pengguna, installer, atau kelulusan seluruh gerbang Live Alpha. Prosedur pengulangan dan review screenshot ada di [panduan build](docs/build-guide.md#build-tercatat-dan-smoke-live-uefi).
 
 ## Target rilis
 
@@ -72,11 +87,12 @@ Referensi ini memakai Ryoku `v1.0.7` (`f7197d72d`) dan Const Harness dari monore
 
 Batas proses, kepemilikan konfigurasi, dan pemisahan capture pengguna dari computer use dijelaskan di [arsitektur ConstOS](docs/architecture.md). Tabel di atas mencatat keputusan yang harus dibuktikan selama integrasi, bukan daftar fitur yang semuanya sudah tersedia.
 
-Gunakan `iso/`, `installer/`, `desktop/`, dan `packages/` sesuai tanggung jawab saat ini. Tambahkan `system/` untuk kebijakan target, `crates/` untuk kode Rust, dan `tests/` untuk smoke test lintas komponen ketika masing-masing dibutuhkan. Sumber helper Linux diusulkan berada di ConstOS dan dikirim sebagai paket versi tersendiri. Monorepo Harness memiliki adapter konsumennya. Tetapkan satu artefak binary per versi untuk kedua repo.
+Gunakan `iso/`, `installer/`, `desktop/`, dan `packages/` sesuai tanggung jawab saat ini; `tests/live/` menampung build tercatat dan smoke UEFI. Tambahkan `system/` untuk kebijakan target dan `crates/` untuk kode Rust ketika dibutuhkan. Sumber helper Linux diusulkan berada di ConstOS dan dikirim sebagai paket versi tersendiri. Monorepo Harness memiliki adapter konsumennya. Tetapkan satu artefak binary per versi untuk kedua repo.
 
 ## Fase 01 · Boot UI dan bukti live boot
 
 - [x] **Build baseline.** Build penuh di Linux menghasilkan ISO dengan checksum terverifikasi. Boot normal dan console fallback lulus di QEMU/OVMF.
+- [x] **Runner smoke lokal.** Build tercatat dari checkout Linux bersih dan dua cold boot QEMU/OVMF menguji kernel, symlink systemd, SDDM, tiga shortcut, DHCP, ZRAM, serta jurnal TTY. Lihat bukti 7 November di atas; workflow GitHub dan hardware tetap belum lulus.
 - [ ] **Tema GRUB.** Buat entri ConstOS Live dan Console/Diagnostics yang jelas, timeout singkat, kontras terbaca, navigasi keyboard, logo, dan fallback teks. Uji nama kernel dan path initramfs pada setiap menu. Pisahkan theme loader dari entry boot supaya recovery bisa dibuka saat aset tema gagal.
 - [ ] **Splash Plymouth.** Mulai dari satu logo dan indikator progres ringan. Integrasikan hook dan tema ke initramfs sesuai profil live serta preset target ketika installer tersedia. Pastikan log bisa dilihat, prompt disk terenkripsi tetap muncul saat fitur itu diaktifkan, dan perangkat tanpa grafis tetap memiliki jalur teks. [Plymouth](https://wiki.freedesktop.org/www/Software/Plymouth/) · [mkinitcpio](https://man.archlinux.org/man/mkinitcpio.8.en)
 - [ ] **Greeter SDDM.** Tema QML memakai token visual yang sama. Sediakan user/session picker, keyboard layout, keadaan password salah, power menu, fokus yang terlihat, dan tema stock sebagai recovery. Autologin `liveuser` hanya di ISO. Sistem terpasang masuk dengan akun yang dibuat installer. [SDDM](https://github.com/sddm/sddm)
@@ -309,7 +325,7 @@ Rust helper berjalan di sesi pengguna. Akses dibedakan per capability antara **m
 | Urutan | Perubahan | Bukti sebelum lanjut |
 | --- | --- | --- |
 | 1 | **Selesai.** Build baseline di Linux dan uji boot normal serta console fallback di QEMU/OVMF. | ISO, checksum, log build, dan bukti desktop serta TTY sudah diperiksa. |
-| 2 | Otomatiskan smoke test untuk kernel, symlink, NetworkManager, SDDM, dan TTY. | Boot live berulang dari hasil staging bersih. |
+| 2 | **Runner tersedia dan lulus lokal.** Build tercatat serta smoke dua entri GRUB, tiga shortcut, kernel, symlink, NetworkManager, SDDM, ZRAM, dan TTY. | Bukti 7 November di atas. Berikutnya jalankan workflow manual pada runner GitHub tepercaya; jangan menganggap file workflow sebagai hasil CI. |
 | 3 | Tambahkan tema GRUB ConstOS dan entry diagnostics yang mudah dibaca. | Uji keyboard, timeout, normal boot, dan fallback. |
 | 4 | Integrasikan Plymouth statis, lalu tema SDDM sebagai perubahan terpisah. | Uji tiap tahap tanpa mengaburkan log atau prompt, dan bandingkan durasi boot. |
 | 5 | Lengkapi paket aplikasi bawaan dan uji launcher, file/MIME, audio, dan portal. | Satu sesi live yang dapat dipakai untuk alur dasar. Mulai installer setelah baseline ini jelas. |

@@ -49,7 +49,8 @@ flowchart TD
 | `daemons/` | Prototipe daemon saat ini. Jangan menambah salinan collector baru untuk setiap UI. |
 | `assets/` | Aset visual sumber/ekspor yang dipakai, dengan provenance dan lisensi yang perlu dicatat. |
 | `docs/` | Arsitektur dan panduan teknis; tidak menyalin backlog atau menyimpan bukti media mentah. |
-| `crates/`, `system/`, `tests/` | Lokasi yang direncanakan untuk Rust, kebijakan sistem, dan smoke lintas komponen; buat saat implementasinya diperlukan. |
+| `tests/` | Runner build tercatat dan smoke Live UEFI; probe hanya berjalan pada VM uji, bukan service yang dikirim dalam ISO. |
+| `crates/`, `system/` | Lokasi yang direncanakan untuk Rust dan kebijakan sistem; buat saat implementasinya diperlukan. |
 
 `iso/buildiso.sh` saat ini men-stage `desktop/hypr/hyprland.lua`, bukan seluruh konfigurasi Hyprland lama. Mengubah file `.conf` yang tidak dimuat tidak mengubah sesi live. Periksa script dan konfigurasi aktual sebelum memigrasikan atau menghapus jalur lama.
 

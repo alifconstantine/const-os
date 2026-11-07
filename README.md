@@ -84,6 +84,8 @@ ConstOS dikembangkan oleh Alif Constantine. Urutan integrasi, target rilis, dan 
 
 ISO live sudah dibangun di Linux dan diuji di VM UEFI. Boot ke Hyprland, launcher, terminal, pengelola berkas, jaringan, ZRAM, dan console fallback berfungsi. Fokus berikutnya adalah Boot UI dan jalur instalasi ke disk.
 
+Runner smoke Live UEFI dan workflow Linux manual tersedia untuk mengulang pemeriksaan dua entri GRUB, tiga shortcut, jaringan, ZRAM, dan jurnal TTY. Cara menjalankan serta batas buktinya ada di [panduan build](docs/build-guide.md#build-tercatat-dan-smoke-live-uefi); hasil eksekusi dicatat di roadmap, terpisah dari kesiapan workflow CI.
+
 Panduan kontribusi agen ada di [AGENTS.md](AGENTS.md), dan prosedur kerja proyek diindeks di [SKILLS.md](SKILLS.md). Perubahan yang memengaruhi perilaku, arsitektur, atau cara kerja harus menyertakan pembaruan dokumen yang relevan; detail aturannya ada di AGENTS.md.
 
 ---

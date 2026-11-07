@@ -23,13 +23,15 @@ Path kode di bawah relatif terhadap root repositori. Baca [AGENTS.md](../../../A
 | --- | --- |
 | Markdown saja | Tautan lokal/anchor, code fence, referensi lama, kesesuaian status/rencana, dan dampak dokumen menurut AGENTS.md. Tidak memerlukan build ISO. |
 | Shell build/staging | Pemeriksaan sintaks shell yang diubah, jalankan staging, lalu periksa file/permission/symlink yang terdampak. Staging bukan bukti boot. |
-| Manifest, kernel, initramfs, boot, atau service live | Build di Linux dan boot QEMU/OVMF sesuai panduan; amati normal boot, console fallback, dan jalur yang berubah. |
+| Manifest, kernel, initramfs, boot, atau service live | Build tercatat dan runner `tests/live/uefi_smoke.py` sesuai panduan build; periksa screenshot dua entri GRUB dan jalur yang berubah. Tambahkan pengujian hardware untuk klaim di luar VM. |
 | UI, keybind, tema, widget, atau portal | Interaksi pada sesi Wayland target: fokus/keyboard, aksi nyata, cancel/error, dan monitor/scale yang relevan. Screenshot hasil render harus cocok dengan build yang diuji. |
 | Screenshot atau recorder | Jalankan alur pengguna, periksa isi clipboard/hasil gambar, buka serta putar rekaman video/audio. Uji sumber, Stop/cancel/denied, dan kasus lifecycle/failure yang diubah sesuai fase 07A. |
 | Installer, storage, update, atau recovery | Gunakan disk VM uji, instalasi/reboot tanpa ISO, periksa target, lalu jalankan update/recovery yang diubah. Pastikan identitas disk sebelum operasi destruktif. |
 | Collector, IPC, helper, atau sandbox | Jalankan klien/skenario nyata dengan user biasa; cocokkan output dengan sumber sistem dan periksa batas izin. Uji penolakan serta penghentian akses yang terdampak. |
 
 Gunakan command serta prasyarat build dari panduan, bukan salinan resep yang bisa tertinggal. Jangan mengklaim boot/hardware/codec/portal lulus berdasarkan manifest atau exit code saja. Jika runtime target tidak tersedia, selesaikan pemeriksaan yang mungkin dan sebutkan batasnya; jangan mencentang acceptance runtime.
+
+Untuk baseline live, gunakan wrapper `tests/live/build.sh` dari checkout Linux bersih dan runner UEFI menurut panduan build. Jangan menyamakan smoke ISO lama tanpa metadata build dengan build dari SHA checkout saat ini. Workflow manual memerlukan runner tepercaya; jangan mengaktifkan PR tidak tepercaya pada host berhak sudo. Runner tidak menggantikan pengujian audio, portal, lock, capture, atau instalasi.
 
 ## 3. Simpan bukti yang tepat
 
