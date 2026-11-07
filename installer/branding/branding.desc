@@ -8,10 +8,10 @@ windowPlacement: center
 
 strings:
     productName:         ConstOS
-    version:             1.0.0 (Harness Edition)
-    shortVersion:        1.0
-    versionedName:       ConstOS 1.0 "Harness Edition"
-    shortVersionedName:  ConstOS 1.0
+    version:             Alpha
+    shortVersion:        Alpha
+    versionedName:       ConstOS Alpha
+    shortVersionedName:  ConstOS Alpha
     bootloaderEntryName: ConstOS
     productUrl:          https://github.com/alifconstantine/const-os
     supportUrl:          https://github.com/alifconstantine/const-os/issues
@@ -19,14 +19,12 @@ strings:
     releaseNotesUrl:     https://github.com/alifconstantine/const-os/releases
 
 images:
-    productLogo:         "const-logo-dark.png"
-    productIcon:         "icon.png"
-    productWelcome:      "const-logo-dark.png"
+    productLogo:         "logo.svg"
+    productIcon:         "constos.svg"
+    productWelcome:      "logo-black.svg"
 
 style:
    SidebarBackground:    "#161616"
    SidebarText:          "#FFFFFF"
    SidebarTextCurrent:   "#FFFFFF"
    SidebarBackgroundCurrent: "#262626"
-
-slideshow:               "show.qml"

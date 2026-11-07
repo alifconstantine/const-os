@@ -199,6 +199,14 @@ def package_versions(probe):
     return valid and bool(version), {"package_count": len(packages), "hyprland": version}
 
 
+def installer_runtime(probe):
+    version = probe.run("calamares", "--version")
+    probe.metrics["calamares_version"] = version
+    return "calamares" in version.lower() and bool(re.search(r"\b3\.4\.\d+\b", version)), {
+        "version": version, "required_module_abi": "3.4",
+    }
+
+
 def boot_metadata(probe):
     cmdline = shlex.split(read_text("/proc/cmdline"))
     sensitive = re.compile(r"password|passwd|token|secret|credential|ssid|(?:^|[._-])key", re.I)
@@ -425,6 +433,7 @@ def baseline(probe):
         probe.check("active_foot", lambda: active_foot(probe))
         probe.check("waybar_layer", lambda: waybar_layer(probe))
         probe.check("hyprland_configerrors", lambda: config_errors(probe))
+        probe.check("installer_runtime", lambda: installer_runtime(probe))
     elif probe.mode == "fallback":
         probe.check("console_boot_target", lambda: (
             "systemd.unit=multi-user.target" in shlex.split(read_text("/proc/cmdline")),

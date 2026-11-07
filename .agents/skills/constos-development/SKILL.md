@@ -12,8 +12,10 @@ Path kode di bawah relatif terhadap root repositori. Baca [AGENTS.md](../../../A
 ## 1. Tentukan jalur efektif
 
 - Untuk ISO, buka `iso/buildiso.sh`, profil, manifest, dan overlay yang terdampak. Cocokkan file sumber dengan hasil staging; jangan mengedit `iso/work/` atau `iso/out/` sebagai perbaikan permanen.
-- Untuk desktop live, periksa file yang disalin script. Saat skill ini ditulis, entry Hyprland yang di-stage adalah `desktop/hypr/hyprland.lua`; konfigurasi `.conf` lama bukan bukti jalur aktif. Jika script berubah, ikuti implementasi dan perbarui prosedur ini.
-- Untuk installed target, ikuti konfigurasi installer dan paket pemilik. Jangan menganggap seluruh overlay live boleh disalin ke disk.
+- Untuk desktop live/target, ikuti `desktop/install.sh` dan sesi `constos.desktop` → `constos-session`. Entry Hyprland efektif adalah `desktop/hypr/hyprland.lua`; layanan user dimulai setelah environment compositor diimpor. Jangan menghidupkan autostart kedua di konfigurasi lama.
+- Untuk boot/login, ikuti `iso/install-boot.sh ROOT live|installed` dan sumber `desktop/boot/`. Hook/preset Archiso serta autologin hanya untuk mode live; target memakai preset terpasang.
+- Untuk identitas logo, ubah master `assets/const-logo.svg`, lalu regenerasikan ekspor sesuai [panduan build](../../../docs/build-guide.md#ekspor-logo). Periksa `assets/manifest.json`, `iso/install-boot.sh`, staging GRUB, dan `installer/install.sh`; jangan menambah salinan master atau mengasumsikan izin redistribusi raster sumber.
+- Untuk installed target, ikuti `installer/install.sh`, manifest target, backend Calamares, serta paket `constos-core`/`constos-desktop`. Bangun paket lewat `packages/build-local.sh` sebagai user biasa sebelum build root; cocokkan checksum artefak dan sumbernya sesuai panduan build. Jangan menyalin seluruh overlay live ke disk.
 - Untuk capture, periksa jalur screenshot, recorder, dan editor yang benar-benar terpasang; cocokkan kemampuan aktual dengan status serta acceptance di roadmap. Jangan memakai izin computer use sebagai jalan pintas.
 - Untuk daemon dan packaging, temukan sumber serta konsumen yang benar-benar dipakai sebelum menambah protokol, menyalin collector, atau mengganti executable.
 
@@ -32,6 +34,8 @@ Path kode di bawah relatif terhadap root repositori. Baca [AGENTS.md](../../../A
 Gunakan command serta prasyarat build dari panduan, bukan salinan resep yang bisa tertinggal. Jangan mengklaim boot/hardware/codec/portal lulus berdasarkan manifest atau exit code saja. Jika runtime target tidak tersedia, selesaikan pemeriksaan yang mungkin dan sebutkan batasnya; jangan mencentang acceptance runtime.
 
 Untuk baseline live, gunakan wrapper `tests/live/build.sh` dari checkout Linux bersih dan runner UEFI menurut panduan build. Jangan menyamakan smoke ISO lama tanpa metadata build dengan build dari SHA checkout saat ini. Workflow manual memerlukan runner tepercaya; jangan mengaktifkan PR tidak tepercaya pada host berhak sudo. Runner tidak menggantikan pengujian audio, portal, lock, capture, atau instalasi.
+
+Gunakan [pengujian terpadu](../../../docs/acceptance-guide.md) untuk tema boot/greeter, lifecycle sesi, screenshot/cancel, portal/audio, dan instalasi. Installer awal hanya untuk disk UEFI kosong: identitas disk VM harus dicocokkan sebelum konfirmasi. Jangan mengganti penolakan preflight dengan bypass signature, penghapusan keyring, atau penghapusan partisi agar pengujian terlihat lulus.
 
 ## 3. Simpan bukti yang tepat
 

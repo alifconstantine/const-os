@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Prasyarat: checkout Git bersih pada Linux x86_64, dependency Archiso dan
 # keyring CachyOS siap. Wrapper tidak menaikkan hak akses sendiri:
-# sudo -n bash tests/live/build.sh --output NEW_DIR
+# sudo -n bash tests/live/build.sh --output NEW_DIR --packages-dir DIR
 # Parent NEW_DIR harus sudah ada; semua artefak dipertahankan, termasuk saat gagal.
 set -euo pipefail
 umask 022
 
 usage() {
-    printf '%s\n' 'Usage: sudo -n bash tests/live/build.sh --output NEW_DIR'
+    printf '%s\n' 'Usage: sudo -n bash tests/live/build.sh --output NEW_DIR --packages-dir DIR'
 }
 
 die() {
@@ -16,6 +16,7 @@ die() {
 }
 
 output_arg=
+packages_dir=
 while (( $# )); do
     case "$1" in
         -h|--help) usage; exit 0 ;;
@@ -24,10 +25,16 @@ while (( $# )); do
             output_arg=$2
             shift 2
             ;;
+        --packages-dir)
+            [[ -z $packages_dir && -n ${2:-} && $2 != -* ]] || die '--packages-dir requires one directory'
+            packages_dir=$2
+            shift 2
+            ;;
         *) usage >&2; die "unknown argument: $1" ;;
     esac
 done
-[[ -n $output_arg ]] || { usage >&2; exit 1; }
+[[ -n $output_arg && -n $packages_dir ]] || { usage >&2; exit 1; }
+packages_dir=$(cd -- "$packages_dir" && pwd -P)
 [[ $(uname -s) == Linux && $(uname -m) == x86_64 ]] || die 'requires an x86_64 Linux host and native Linux checkout'
 (( EUID == 0 )) || die 'run with sudo -n bash; the wrapper requires root and never invokes sudo itself'
 command -v python3 >/dev/null || die 'install Python 3 on the build host'
@@ -101,6 +108,8 @@ build() {
         command -v "$tool" >/dev/null || die "missing host tool: $tool"
     done
     pacman -Q > "$output/host-packages.txt"
+    cp -- "$packages_dir/SHA256SUMS" "$output/local-packages.sha256"
+    cp -- "$packages_dir/SOURCE_SHA256SUMS" "$output/package-sources.sha256"
     uname -a
     git --version
     bash --version
@@ -119,7 +128,7 @@ build() {
     work_dir=$(mktemp -d -- "$output/work.XXXXXX")
     mkdir -- "$work_dir/staging" "$work_dir/build"
     printf 'Work: %s\n' "$work_dir"
-    bash iso/buildiso.sh --stage-only -w "$work_dir/staging" 2>&1 | tee "$output/staging.log"
+    bash iso/buildiso.sh --stage-only --packages-dir "$packages_dir" -w "$work_dir/staging" 2>&1 | tee "$output/staging.log"
     staged_profile=$(python3 - "$repo_dir" "$work_dir/staging" <<'PY'
 from pathlib import Path
 import subprocess
@@ -153,7 +162,7 @@ PY
     )
     printf 'Validated staged profile: %s\n' "$staged_profile" | tee -a "$output/staging.log"
     printf 'Building full ISO from checkout root with verbose Archiso output\n'
-    bash iso/buildiso.sh -v -w "$work_dir/build" -o "$output"
+    bash iso/buildiso.sh -v --packages-dir "$packages_dir" -w "$work_dir/build" -o "$output"
 
     local -a isos
     shopt -s nullglob

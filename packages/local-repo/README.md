@@ -12,4 +12,4 @@ Direktori ini berfungsi sebagai repositori pacman lokal untuk menampung paket bi
    ```
 3. File database `constos-local.db.tar.zst` dan symlink `constos-local.db` akan terbuat secara otomatis.
 
-Profil live saat ini dapat dibangun tanpa repositori lokal. Aktifkan repositori ini saat paket Harness sudah memuat binary yang dapat dijalankan.
+Build saat ini memakai `packages/build-local.sh DIR` untuk membuat paket `constos-core` dan `constos-desktop` beserta checksum di direktori output baru. Berikan direktori itu melalui `iso/buildiso.sh --packages-dir DIR`; installer mengonsumsi artefak lokal terverifikasi dari ISO, tanpa menambahkan repo sementara ke konfigurasi target. Prosedur repo-add di atas hanya untuk eksperimen repo terpisah, bukan prasyarat build live atau jalur update resmi. Resep Harness belum memuat runtime lengkap.

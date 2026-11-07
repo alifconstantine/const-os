@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="assets/const-logo-dark.png" alt="ConstOS Logo" width="320"/>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/const-logo.svg"/>
+  <img src="assets/exports/const-logo-black.svg" alt="ConstOS — simbol Const" width="160"/>
+</picture>
 
 # ConstOS
 
@@ -28,11 +31,12 @@ Arsitektur komponen, batas izin, dan pemisahan profil live dari sistem terpasang
 | Komponen | Status |
 | :--- | :--- |
 | Kernel dan proses | Manifest live memilih kernel CachyOS BORE. Prototipe `constd` membaca load average dan sampel state proses. |
+| Boot dan login | Sumber tema GRUB, Plymouth, dan SDDM memakai palet hitam/putih/biru. Penerimaan tema dan jalur fallback dicatat terpisah dari bukti boot baseline. |
 | Memori dan ZRAM | Overlay live mengatur `zram-generator` dengan `zstd`, `vm.swappiness = 100`, dan `vm.vfs_cache_pressure = 50`. |
-| Storage dan recovery | Perkakas Btrfs dan Snapper masuk manifest. Penataan subvolume dan recovery pada sistem terpasang masih dalam pengembangan. |
+| Storage dan installer | Backend UEFI disk kosong serta konfigurasi Btrfs/Snapper tersedia. Installer diblokir ketidakcocokan ABI Boost pada paket Calamares upstream; instalasi penuh dan recovery belum lulus. Detail di roadmap. |
 | Telemetri dan integrasi Harness | `constd` punya prototipe HTTP GET/JSON. Integrasi dengan Harness dan transport MCP masih direncanakan. |
 | Sandbox dan izin | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
-| Screenshot dan rekaman | Shortcut serta aksi Waybar untuk screenshot tersedia, tetapi belum tercatat teruji. Preview/anotasi, rekaman video, dan rekaman audio direncanakan di fase 07A roadmap. |
+| Screenshot dan rekaman | Print, Alt+Print, launcher, serta Waybar memakai satu helper screenshot area/seluruh desktop dengan clipboard dan cancel. Dukungan runtime mengikuti bukti di roadmap; preview/anotasi serta recorder tetap di fase 07A. |
 | Shell, widget, dan aset | Konfigurasi desktop serta logo tersedia. Shell/Settings terpadu, katalog widget, aksesibilitas, dan pipeline aset masih dalam pengembangan. |
 
 ---
@@ -44,7 +48,8 @@ ConstOS/
 ├── assets/                        # Logo dan aset visual ConstOS
 ├── docs/                          # Arsitektur distro & panduan teknis
 │   ├── architecture.md            # Arsitektur, batas komponen, dan izin
-│   └── build-guide.md             # Panduan build ISO di lingkungan Arch/CachyOS
+│   ├── build-guide.md             # Build ISO di lingkungan Arch/CachyOS
+│   └── acceptance-guide.md        # Uji terpadu boot, desktop, dan instalasi
 ├── iso/                           # Mesin build ISO (Archiso + CachyOS profile)
 │   ├── buildiso.sh                # Skrip utama generator ISO
 │   ├── profiledef.sh              # Metadata ISO ConstOS
@@ -59,10 +64,10 @@ ConstOS/
 │   ├── hypr/                      # Konfigurasi Hyprland
 │   ├── waybar/                    # Status bar dan metrik desktop
 │   └── wofi/                      # App launcher
-├── installer/                     # Rancangan konfigurasi dan branding Calamares
+├── installer/                     # Launcher, konfigurasi, dan backend Calamares UEFI
 ├── daemons/
 │   └── constd/                    # Prototipe monitor /proc dan /sys
-└── packages/                      # Packaging pacman untuk Const Harness (.pkg.tar.zst)
+└── packages/                      # Paket core/desktop dan resep Const Harness
 ```
 
 ---
@@ -73,7 +78,10 @@ Lihat panduan lengkap di [docs/build-guide.md](docs/build-guide.md).
 
 ```bash
 bash iso/buildiso.sh --stage-only
-sudo bash iso/buildiso.sh -v
+# Artefak target dibuat sebagai user biasa, lalu diberikan ke build root.
+packages="$PWD/iso/out/packages-$(date -u +%Y%m%dT%H%M%SZ)"
+bash packages/build-local.sh "$packages"
+sudo bash iso/buildiso.sh --packages-dir "$packages" -v
 ```
 
 ---
@@ -82,7 +90,9 @@ sudo bash iso/buildiso.sh -v
 
 ConstOS dikembangkan oleh Alif Constantine. Urutan integrasi, target rilis, dan kriteria verifikasi ada di [roadmap pengembangan](implementation_plan.md).
 
-ISO live sudah dibangun di Linux dan diuji di VM UEFI. Boot ke Hyprland, launcher, terminal, pengelola berkas, jaringan, ZRAM, dan console fallback berfungsi. Fokus berikutnya adalah Boot UI dan jalur instalasi ke disk.
+Arah visual ditetapkan di [design.md](design.md): dasar hitam/putih, aksen biru yang dapat diganti, serta rancangan tema yang mengikuti wallpaper. Dokumen ini menjadi acuan desain; pemilih aksen, generator palet, dan Settings tersebut belum diimplementasikan.
+
+Baseline ISO live sudah dibangun di Linux dan diuji di VM UEFI. Bukti itu tidak otomatis berlaku untuk integrasi tema/desktop/installer berikutnya. Gunakan [panduan pengujian terpadu](docs/acceptance-guide.md) untuk memeriksa alur baru dari boot sampai instalasi disk kosong dan reboot tanpa ISO; status aktual ada di roadmap.
 
 Runner smoke Live UEFI dan workflow Linux manual tersedia untuk mengulang pemeriksaan dua entri GRUB, tiga shortcut, jaringan, ZRAM, dan jurnal TTY. Cara menjalankan serta batas buktinya ada di [panduan build](docs/build-guide.md#build-tercatat-dan-smoke-live-uefi); hasil eksekusi dicatat di roadmap, terpisah dari kesiapan workflow CI.
 

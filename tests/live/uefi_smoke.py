@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import queue
+import re
 import secrets
 import shutil
 import subprocess
@@ -267,7 +268,7 @@ def run_boot(args, server, mode):
             if mode == "desktop":
                 vm.key("meta_l", "ret")
                 time.sleep(1)
-            elif "liveuser@" not in text:
+            elif not re.search(r"liveuser[@a]cachyos|automatic login", text):
                 time.sleep(1)
                 continue
             vm.type(command)

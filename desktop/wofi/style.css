@@ -1,46 +1,24 @@
-* {
-    font-family: "Hack", monospace;
-}
+@import "../constos/theme.css";
 
+* { font-family: "Noto Sans", sans-serif; font-size: 14px; }
 window {
-    background-color: #007d6f; /* cachydgreen */
+    background: @surface;
+    color: @text;
+    border: 1px solid @control_border;
+    border-radius: 10px;
 }
-
+#outer-box { padding: 12px; }
 #input {
-    margin: 5px;
-    border-radius: 0px;
-    border: none;
-    background-color: #111826; /* cachydgreen */
-    color: #ffffffff; /* cachywhite */
-}
-
-#inner-box {
-    background-color: #111826; /* cachydblue */
-}
-
-#outer-box {
-    margin: 2px;
     padding: 10px;
-    background-color: #111826; /* cachydblue */
+    margin-bottom: 12px;
+    background: @surface_raised;
+    color: @text;
+    border: 2px solid @accent;
+    border-radius: 6px;
 }
-
-#scroll {
-    margin: 5px;
-}
-
-#text {
-    padding: 4px;
-    color: #ffffffff; /* cachywhite */
-}
-
-#entry:nth-child(even){
-    background-color: #182545; /* cachymblue */
-}
-
-#entry:selected {
-    background-color: #00aa84; /* cachymgreen */
-}
-
-#text:selected {
-    background: transparent;
-}
+#scroll { margin-top: 4px; }
+#entry { padding: 8px; border-radius: 6px; }
+#entry:hover { background: @surface_hover; }
+#entry:selected { background: @accent_surface; border-left: 2px solid @accent; }
+#text { color: @text; margin: 0 8px; }
+#img { margin-right: 8px; }

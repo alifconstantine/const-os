@@ -4,7 +4,7 @@
 
 # --- Base & Kernel Subsistem ---
 base
-base-devel
+sudo
 linux-cachyos-bore
 mkinitcpio
 mkinitcpio-archiso
@@ -18,6 +18,8 @@ cachyos-hooks
 chwd
 archlinux-keyring
 arch-install-scripts
+grub
+efibootmgr
 
 # --- Memory Management & Paging (Konsep SO #2) ---
 zram-generator
@@ -58,6 +60,17 @@ waybar
 wofi
 foot
 thunar
+firefox
+mousepad
+ristretto
+evince
+file-roller
+thunar-archive-plugin
+gvfs
+udisks2
+xdg-user-dirs
+xdg-utils
+libnotify
 mako
 swaylock
 wlogout
@@ -78,6 +91,7 @@ pipewire-pulse
 pipewire-jack
 wireplumber
 pavucontrol
+alsa-utils
 
 # --- Networking ---
 networkmanager
@@ -86,6 +100,8 @@ wireless_tools
 wpa_supplicant
 bluez
 bluez-utils
+blueman
+nm-connection-editor
 curl
 wget
 rsync
@@ -95,9 +111,21 @@ ttf-jetbrains-mono-nerd
 noto-fonts
 noto-fonts-emoji
 papirus-icon-theme
+gsettings-desktop-schemas
+adwaita-cursors
 
 # --- Display Manager ---
 sddm
+qt6-declarative
+qt6-svg
+qt6-5compat
+xorg-server
+xorg-xauth
+plymouth
+
+# --- Installer khusus live; target tidak menyalin overlay ISO ---
+cachyos-calamares
+zenity
 
 # --- ConstOS Core Packages ---
 fastfetch

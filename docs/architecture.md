@@ -8,13 +8,13 @@ Dokumen ini menjelaskan batas komponen dan arah desain. Status serta bukti pener
 
 | Area | Implementasi saat ini | Target dan batas |
 | --- | --- | --- |
-| Build dan boot | Profil Archiso di `iso/`, kernel CachyOS BORE, GRUB UEFI, dan overlay live. Roadmap mencatat build Linux serta boot QEMU/OVMF. | CI Linux, Boot UI, dan bukti perangkat fisik. BIOS, Secure Boot, dan varian kernel/CPU bukan dukungan implisit. |
-| Desktop live | Build menyalin Lua Hyprland dan konfigurasi Waybar, Wofi, Mako, Swaylock, serta Wlogout dari `desktop/`. | Shell/Settings Quickshell/QML masih perlu spike fokus, multi-monitor, aksesibilitas, dan performa. Fallback tetap tersedia selama cutover. |
-| Screenshot dan media | Lua Hyprland/Waybar memanggil `grim`, `slurp`, dan `wl-copy`. Hasil capture belum tercatat teruji. | UI screenshot, editor anotasi, recorder video, dan recorder audio di fase 07A. Backend/format dipilih dari hasil uji; bukan layanan yang sudah tersedia. |
-| Sistem dan storage | Konfigurasi ZRAM/sysctl serta manifest Btrfs/Snapper tersedia. Calamares masih berupa konfigurasi/branding. | Installer memasang target yang terpisah dari live; layout disk, snapshot, update, dan recovery dibuktikan sebelum diklaim. |
+| Build dan boot | Profil Archiso di `iso/`, kernel CachyOS BORE, tema GRUB/Plymouth/SDDM, dan `iso/install-boot.sh`. Roadmap mencatat bukti build baseline serta verifikasi integrasi terbaru. | CI Linux, pembuktian seluruh skenario Boot UI di VM baru, dan bukti perangkat fisik. BIOS, Secure Boot, dan varian kernel/CPU bukan dukungan implisit. |
+| Desktop live | `desktop/install.sh` memasang sesi `constos.desktop` → `constos-session`, Lua Hyprland, unit user `constos-session.target`, tema fallback, portal, MIME, dan override GSettings. | Shell/Settings Quickshell/QML masih perlu spike fokus, multi-monitor, aksesibilitas, dan performa. Fallback tetap tersedia selama cutover. |
+| Screenshot dan media | `constos-screenshot` dipakai oleh Print, Alt+Print, launcher, dan Waybar; seleksi dibatalkan tanpa menimpa clipboard. | Pembuktian pada sesi live/installed penuh, lalu UI screenshot, editor anotasi, recorder video, dan recorder audio di fase 07A. |
+| Sistem dan storage | Konfigurasi ZRAM/sysctl, paket `constos-core`/`constos-desktop`, serta launcher/backend Calamares untuk disk UEFI kosong tersedia. | Bukti instalasi penuh ke disk, reboot tanpa ISO, update, dan recovery sistem sebelum label Installable Alpha. |
 | Telemetri | Prototipe Python `constd` HTTP GET/JSON. | Satu collector Rust bersama, CLI `constosctl`, dan IPC sesi bertipe. HTTP lama dihapus ketika konsumen sudah bermigrasi. |
 | Harness dan sandbox | Resep paket Harness dan wrapper Bubblewrap tersedia. | Paket Linux lengkap, helper computer use sesi pengguna, izin per capability, dan sandbox teruji. Keberadaan wrapper bukan bukti seluruh workspace/desktop sudah terisolasi. |
-| Aset | Logo dan ikon berada di `assets/`; tema desktop berada di `desktop/`. | Token bersama, manifest asal/lisensi, ekspor terpakai, dan kepemilikan paket. Audit sumber aset masih diperlukan. |
+| Aset | Master simbol Const di `assets/const-logo.svg`, ekspor boot/ikon di `assets/exports/`, serta manifest logo tersedia. Tema berada di `desktop/`. | Audit hak logo, aset lain, dan penerimaan boot baru masih diperlukan; pemilihan logo bukan bukti lisensi redistribusi. |
 
 ## Alur target
 
@@ -42,17 +42,17 @@ flowchart TD
 
 | Lokasi | Pemilik tanggung jawab |
 | --- | --- |
-| `iso/` | Profil Archiso, manifest live, boot, overlay, staging, dan pemanggilan `mkarchiso`. Artefak kerja/output bukan sumber konfigurasi. |
-| `installer/` | Konfigurasi dan branding installer; kelak alur pemasangan target dan pembersihan komponen khusus live. |
-| `desktop/` | Konfigurasi sumber desktop, keybind, tema, dan adapter sesi. Hanya file yang dipasang/dimuat boleh disebut efektif. |
-| `packages/` | Resep paket serta kepemilikan file/default vendor. Paket bukan bukti executable upstream sudah disertakan. |
+| `iso/` | Profil Archiso, manifest live, GRUB, helper `install-boot.sh`, overlay, staging, dan pemanggilan `mkarchiso`. Artefak kerja/output bukan sumber konfigurasi. |
+| `installer/` | Launcher, konfigurasi Calamares, modul job Python, manifest target, dan backend pemasangan UEFI disk kosong. |
+| `desktop/` | Sumber sesi, keybind, tema boot/fallback, unit user, helper screenshot/lock, portal, dan MIME. Hanya file yang dipasang `desktop/install.sh` atau `iso/install-boot.sh` boleh disebut efektif. |
+| `packages/` | Builder dan resep `constos-core`/`constos-desktop` serta resep Harness. Paket Harness belum menyertakan binary upstream. |
 | `daemons/` | Prototipe daemon saat ini. Jangan menambah salinan collector baru untuk setiap UI. |
 | `assets/` | Aset visual sumber/ekspor yang dipakai, dengan provenance dan lisensi yang perlu dicatat. |
 | `docs/` | Arsitektur dan panduan teknis; tidak menyalin backlog atau menyimpan bukti media mentah. |
 | `tests/` | Runner build tercatat dan smoke Live UEFI; probe hanya berjalan pada VM uji, bukan service yang dikirim dalam ISO. |
 | `crates/`, `system/` | Lokasi yang direncanakan untuk Rust dan kebijakan sistem; buat saat implementasinya diperlukan. |
 
-`iso/buildiso.sh` saat ini men-stage `desktop/hypr/hyprland.lua`, bukan seluruh konfigurasi Hyprland lama. Mengubah file `.conf` yang tidak dimuat tidak mengubah sesi live. Periksa script dan konfigurasi aktual sebelum memigrasikan atau menghapus jalur lama.
+`iso/buildiso.sh` dan paket `constos-desktop` memanggil `desktop/install.sh` serta `iso/install-boot.sh`, sehingga sesi live dan sistem terpasang berbagi sumber desktop/boot yang sama dengan mode konfigurasi yang sesuai. File `.conf` Hyprland lama telah dihapus; sisa file di `desktop/` yang tidak dipasang helper tidak mengubah sesi.
 
 ## Batas proses dan kepercayaan
 
@@ -84,14 +84,20 @@ Sandbox terminal terpisah dari izin desktop. Jangan memberi workspace sandbox so
 
 UI memakai token visual bersama, aksi bertipe, dan state aktual. Provider memiliki subscription/event serta kebijakan sampling; shell, Monitor, dan widget tidak memindai metrik yang sama secara independen. Error provider harus menjadi state lokal, bukan menjatuhkan shell.
 
+Arah visual dan kontrak interaksi tema ada di [design.md](../design.md); pemilih aksen dan generator palet belum diimplementasikan. Targetnya satu pemilik preferensi Appearance dan satu hasil generasi token per sesi, bukan ekstraktor wallpaper terpisah pada tiap widget/toolkit. Default token vendor dimiliki paket desktop; pilihan mode Default/Manual/Wallpaper dan wallpaper sumber disimpan per pengguna. Settings meminta preview/apply/cancel pada pemilik state yang sama; adapter toolkit melaporkan penerapan atau kegagalan aktual. Token turunan adalah hasil generasi, bukan sumber preferensi kedua. Versi schema, algoritme, path, dan transport konkret ditetapkan saat implementasi.
+
+Ekstraksi wallpaper berjalan lokal sebagai user biasa; kegagalan mempertahankan palet terakhir yang valid dengan status error. Boot/initramfs dan greeter memakai ekspor vendor statis tanpa membaca wallpaper atau home pengguna. Tema adaptif tidak memberikan izin capture maupun computer use dan tidak memperluas akses berkas ke pengguna lain.
+
 Widget bawaan memiliki ID jenis/instance, schema preferensi, sumber data, aksi terbatas, dan lifecycle. Layout per-user dimigrasikan ketika upgrade atau output berubah. Plugin pihak ketiga tidak termasuk dukungan 1.0 sebelum model izin/kompatibilitas/isolasinya ditetapkan. Aksesibilitas QML, fokus, dan keyboard diuji sebelum toolkit dikunci.
 
-Aset dipasang oleh paket yang memakainya. Manifest yang direncanakan mencatat asal, versi, lisensi, ID, ekspor, dan varian. Build menggunakan ekspor yang dikomit, tanpa memanggil layanan generasi gambar. Preferensi tema/wallpaper pengguna terpisah dari default vendor. Roadmap fase 06 menetapkan alur desain serta pemeriksaan visualnya.
+Aset dipasang oleh paket yang memakainya. `assets/manifest.json` mencatat asal logo, master, ekspor, penggunaan, paket pemilik, serta audit izin yang belum selesai. `constos-desktop` memasang SVG branding dan ikon `constos` hicolor melalui `iso/install-boot.sh`; GRUB/Plymouth menerima ekspor PNG yang sama, SDDM memakai SVG. Staging installer mengambil simbol putih/hitam dan ikon dari sumber yang sama. `packages/build-local.sh` menyertakan `assets/` pada fingerprint sumber agar artefak branding lama ditolak. Build menggunakan ekspor yang dikomit dan tidak memanggil renderer atau layanan generasi gambar. Preferensi tema/wallpaper pengguna terpisah dari default vendor; cakupan aset lain tetap mengikuti fase 06 roadmap.
 
 ## Konfigurasi, state, dan lifecycle sesi
 
 - Paket memiliki default vendor; preferensi pengguna mengikuti XDG config, data persisten mengikuti XDG data, state mengikuti XDG state, dan resource sementara mengikuti runtime directory sesi. Path serta schema konkret ditetapkan bersama implementasinya.
 - Tulis preferensi secara atomik, versikan schema, dan migrasikan tanpa menimpa pilihan pengguna. Seeder hanya membuat konfigurasi awal yang belum ada.
+- Sesi grafis diluncurkan melalui `constos-session`, lalu `constos-session-start` mengimpor `WAYLAND_DISPLAY` aktual dan mengaktifkan `constos-session.target`. Saat logout, layanan desktop dan portal dihentikan serta environment Wayland dibersihkan agar login berikutnya tidak menggandakan panel, applet, atau daemon notifikasi.
+- Installer hanya berjalan dari ISO live UEFI dan memeriksa executable Calamares sebelum pemilihan disk. Data override Calamares mencakup settings, modules, branding, dan tautan QML bawaan pada direktori yang sama. Preflight memeriksa waktu/keyring lalu mengunduh transaksi bertanda tangan dan menyimpan daftar arsip beserta hash sebelum partisi. Storage memeriksa ulang identitas disk serta hash arsip; bootstrap memakai `pacstrap -U` dari arsip tepat tersebut, tanpa sinkronisasi repo ulang. Target dibangun dari transaksi itu dan paket lokal ber-checksum, bukan overlay live. Symlink `os-release` upstream yang dikenal dan belum dimiliki paket dilepas sebelum pemasangan core, lalu identitas target divalidasi.
 - Gunakan direktori media XDG untuk hasil capture sesuai pilihan pengguna. Jangan menyimpan rekaman atau rahasia di direktori runtime yang bisa hilang saat logout.
 - Satu pemilik per service sesi, notification bus name, dan reservasi tepi layar. Jangan menjalankan dua panel/daemon setelah login ulang atau selama cutover.
 - Impor environment dari sesi aktif; jangan hardcode nama display Wayland. Lock/logout harus memberi jalur penghentian akses capture dan computer use yang dapat diuji.

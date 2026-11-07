@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Called once the compositor has supplied its real socket/display environment.
+set -euo pipefail
+: "${WAYLAND_DISPLAY:?Run this helper inside the compositor session}"
+export XDG_CURRENT_DESKTOP=Hyprland XDG_SESSION_DESKTOP=constos XDG_SESSION_TYPE=wayland
+variables=(WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE)
+for variable in DISPLAY HYPRLAND_INSTANCE_SIGNATURE; do
+    [[ -z ${!variable:-} ]] || variables+=("$variable")
+done
+dbus-update-activation-environment --systemd "${variables[@]}"
+xdg-user-dirs-update
+systemctl --user start pipewire.socket pipewire-pulse.socket wireplumber.service
+systemctl --user start constos-session.target

@@ -1,0 +1,21 @@
+# Maintainer: ConstOS
+pkgname=constos-core
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='ConstOS installed-system identity and vendor policy'
+arch=('any')
+url='https://github.com/alifconstantine/const-os'
+license=('custom')
+depends=('base' 'sudo' 'networkmanager' 'zram-generator' 'snapper' 'btrfs-progs')
+backup=('etc/os-release' 'etc/sudoers.d/10-constos-wheel')
+source=('constos-sources.tar')
+sha256sums=("${CONSTOS_SOURCE_SHA256:?Build with packages/build-local.sh}")
+
+package() {
+  local tree="$srcdir/constos"
+  install -Dm644 "$tree/iso/airootfs/etc/os-release" "$pkgdir/etc/os-release"
+  install -Dm440 "$tree/packages/constos-core/files/10-constos-wheel" "$pkgdir/etc/sudoers.d/10-constos-wheel"
+  install -Dm644 "$tree/iso/airootfs/etc/systemd/zram-generator.conf" "$pkgdir/usr/lib/systemd/zram-generator.conf"
+  install -Dm644 "$tree/iso/airootfs/etc/sysctl.d/99-constos-memory.conf" "$pkgdir/usr/lib/sysctl.d/99-constos-memory.conf"
+  install -Dm644 "$tree/installer/pacman.conf" "$pkgdir/usr/share/constos/pacman.conf"
+}

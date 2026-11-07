@@ -1,24 +1,24 @@
 {
-    "label" : "lock",
-    "action" : "swaylock",
-    "text" : "Lock",
-    "keybind" : "l"
+    "label": "lock",
+    "action": "constos-lock",
+    "text": "Kunci Layar",
+    "keybind": "l"
 }
 {
-    "label" : "logout",
-    "action" : "hyprctl dispatch 'hl.dsp.exit()'",
-    "text" : "Logout",
-    "keybind" : "e"
+    "label": "logout",
+    "action": "hyprctl dispatch 'hl.dsp.exit()'",
+    "text": "Keluar Sesi",
+    "keybind": "e"
 }
 {
-    "label" : "shutdown",
-    "action" : "systemctl poweroff",
-    "text" : "Shutdown",
-    "keybind" : "s"
+    "label": "shutdown",
+    "action": "systemctl poweroff",
+    "text": "Matikan",
+    "keybind": "s"
 }
 {
-    "label" : "reboot",
-    "action" : "systemctl reboot",
-    "text" : "Reboot",
-    "keybind" : "r"
+    "label": "reboot",
+    "action": "systemctl reboot",
+    "text": "Mulai Ulang",
+    "keybind": "r"
 }

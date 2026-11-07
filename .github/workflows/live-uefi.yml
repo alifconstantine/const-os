@@ -51,7 +51,7 @@ jobs:
             echo 'Firmware OVMF_CODE/OVMF_VARS harus file yang dapat dibaca user runner.' >&2
             exit 1
           }
-          for tool in sudo python3 qemu-system-x86_64 tesseract mkarchiso pacman git; do
+          for tool in sudo python3 qemu-system-x86_64 tesseract mkarchiso pacman git makepkg; do
             command -v "$tool" >/dev/null || {
               printf 'Tool runner belum tersedia: %s\n' "$tool" >&2
               exit 1
@@ -63,13 +63,25 @@ jobs:
           printf 'root=%s\nbuild=%s\nsmoke=%s\n' \
             "$evidence_root" "$evidence_root/build" "$evidence_root/smoke" >> "$GITHUB_OUTPUT"
 
+      - name: Regresi keselamatan installer tanpa disk
+        shell: bash
+        run: python3 -m unittest discover -s tests/installer -p 'test_*.py'
+
+      - name: Bangun paket lokal sebagai user runner
+        shell: bash
+        env:
+          EVIDENCE_ROOT: ${{ steps.paths.outputs.root }}
+        run: |
+          set -euo pipefail
+          bash packages/build-local.sh "$EVIDENCE_ROOT/packages"
+
       - name: Build ISO dan simpan identitas checkout serta checksum
         shell: bash
         env:
           BUILD_DIR: ${{ steps.paths.outputs.build }}
         run: |
           set -euo pipefail
-          sudo -n bash tests/live/build.sh --output "$BUILD_DIR"
+          sudo -n bash tests/live/build.sh --output "$BUILD_DIR" --packages-dir "$(dirname -- "$BUILD_DIR")/packages"
 
       - name: Cold boot desktop dan console fallback sebagai user biasa
         shell: bash
@@ -104,6 +116,8 @@ jobs:
             ${{ steps.paths.outputs.build }}/host-packages.txt
             ${{ steps.paths.outputs.build }}/source-status.txt
             ${{ steps.paths.outputs.build }}/*.iso.sha256
+            ${{ steps.paths.outputs.build }}/local-packages.sha256
+            ${{ steps.paths.outputs.build }}/package-sources.sha256
             ${{ steps.paths.outputs.smoke }}/**/*.json
             ${{ steps.paths.outputs.smoke }}/**/*.log
             ${{ steps.paths.outputs.smoke }}/**/*.txt
