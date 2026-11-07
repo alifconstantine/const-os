@@ -86,7 +86,7 @@ Output bersih atau interface tersedia tidak menggantikan aksi pengguna pada tabe
 
 ## Installer dan reboot tanpa ISO
 
-Sebelum mencoba wizard, jalankan `calamares --version` di sesi live. Audit menemukan paket upstream meminta Boost Python 1.91 sedangkan repo memasang 1.92; installer tetap diblokir sampai binary yang cocok tersedia. Kesalahan loader/library adalah kegagalan prasyarat, bukan alasan menghapus keyring, mengubah symlink library, atau melewati preflight. Launcher memeriksa binary sebelum meminta konfirmasi disk.
+Sebelum mencoba wizard, jalankan `calamares --version` dan `pacman -Q constos-calamares boost-libs python` di sesi live. Paket lokal `constos-calamares 3.4.1-1` dibangun terhadap Boost 1.92 dan Python 3.14 pada ABI repo saat ini. Kesalahan loader/library adalah kegagalan prasyarat, bukan alasan menghapus keyring, mengubah symlink library, atau melewati preflight. Launcher memeriksa binary sebelum meminta konfirmasi disk. Log runtime ditulis ke `/run/constos-installer/calamares.log` dan `/run/constos-installer/pacman.log`.
 
 1. Jalankan **Install ConstOS** dari launcher. Batalkan satu kali sebelum konfirmasi disk; tidak boleh ada perubahan partisi atau pemasangan target.
 2. Periksa mode UEFI, jaringan, waktu tersinkronisasi, keyring, sumber paket, ruang cache, serta paket lokal. Pada VM terpisah, uji jaringan/mirror gagal sebelum preflight; lalu uji putus jaringan setelah preflight selesai. Pemasangan sesudah partisi harus memakai arsip transaksi terverifikasi tanpa sinkronisasi/unduhan repo baru.

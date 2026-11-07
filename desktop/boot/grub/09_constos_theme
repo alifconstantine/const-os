@@ -1,6 +1,6 @@
 #!/bin/sh
 # Tema opsional, terpisah dari entry kernel yang dibuat 10_linux upstream.
-set -eu
+set -e
 . /usr/share/grub/grub-mkconfig_lib
 
 theme=/usr/share/grub/themes/constos/theme.txt

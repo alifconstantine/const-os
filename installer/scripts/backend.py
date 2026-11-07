@@ -231,10 +231,10 @@ def finalize(root):
         if re.search(r'^\s*\[Autologin\]', path.read_text(), re.M):
             raise RuntimeError('Konfigurasi autologin tidak diizinkan pada target.')
     grub = root / 'etc/default/grub'
-    text = grub.read_text()
-    text = re.sub(r'^GRUB_CMDLINE_LINUX_DEFAULT=.*$',
-                  'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"', text, flags=re.M)
-    grub.write_text(text)
+    grub_text = grub.read_text()
+    grub_text = re.sub(r'^GRUB_CMDLINE_LINUX_DEFAULT=.*$',
+                       'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"', grub_text, flags=re.M)
+    grub.write_text(grub_text)
     for unit in ('NetworkManager.service', 'sddm.service', 'systemd-timesyncd.service',
                  'bluetooth.service', 'snapper-timeline.timer', 'snapper-cleanup.timer'):
         command(['systemctl', '--root', root, 'enable', unit])
@@ -245,22 +245,28 @@ def finalize(root):
     command(['arch-chroot', root, 'chown', 'sddm:sddm', '/var/lib/sddm/state.conf'])
     # Snapper create-config ingin membuat .snapshots sendiri. Pertahankan subvolume
     # @snapshots terpisah dengan mount ulang sesudah config dibuat.
-    command(['umount', root / '.snapshots'])
-    (root / '.snapshots').rmdir()
-    command(['arch-chroot', root, 'snapper', '-c', 'root', 'create-config', '/'])
-    command(['btrfs', 'subvolume', 'delete', root / '.snapshots'])
-    (root / '.snapshots').mkdir()
-    command(['arch-chroot', root, 'mount', '/.snapshots'])
     config = root / 'etc/snapper/configs/root'
-    text = config.read_text()
+    if not config.exists():
+        if (root / '.snapshots').is_mount():
+            command(['umount', root / '.snapshots'])
+        command(['rm', '-rf', root / '.snapshots'])
+        # Di dalam chroot, snapper membutuhkan --no-dbus agar tidak mencoba menghubungi daemon host.
+        command(['arch-chroot', root, 'snapper', '--no-dbus', '-c', 'root', 'create-config', '/'])
+        command(['btrfs', 'subvolume', 'delete', root / '.snapshots'])
+        (root / '.snapshots').mkdir()
+        command(['arch-chroot', root, 'mount', '/.snapshots'])
+    elif not (root / '.snapshots').is_mount():
+        (root / '.snapshots').mkdir(exist_ok=True)
+        command(['arch-chroot', root, 'mount', '/.snapshots'])
+    snapper_text = config.read_text()
     limits = {'TIMELINE_CREATE': 'yes', 'TIMELINE_CLEANUP': 'yes',
               'TIMELINE_LIMIT_HOURLY': '6', 'TIMELINE_LIMIT_DAILY': '7',
               'TIMELINE_LIMIT_WEEKLY': '2', 'TIMELINE_LIMIT_MONTHLY': '0',
               'TIMELINE_LIMIT_YEARLY': '0', 'NUMBER_CLEANUP': 'yes',
               'NUMBER_LIMIT': '10', 'NUMBER_LIMIT_IMPORTANT': '3'}
     for key, value in limits.items():
-        text = re.sub(rf'^{key}=.*$', f'{key}="{value}"', text, flags=re.M)
-    config.write_text(text)
+        snapper_text = re.sub(rf'^{key}=.*$', f'{key}="{value}"', snapper_text, flags=re.M)
+    config.write_text(snapper_text)
     (root / '.snapshots').chmod(0o750)
     command(['arch-chroot', root, 'mkinitcpio', '-P'])
     command(['arch-chroot', root, 'grub-install', '--target=x86_64-efi',
@@ -269,7 +275,7 @@ def finalize(root):
     command(['arch-chroot', root, 'grub-install', '--target=x86_64-efi',
              '--efi-directory=/boot/efi', '--removable', '--no-nvram'])
     command(['arch-chroot', root, 'grub-mkconfig', '-o', '/boot/grub/grub.cfg'])
-    command(['arch-chroot', root, 'snapper', '-c', 'root', 'create',
+    command(['arch-chroot', root, 'snapper', '--no-dbus', '-c', 'root', 'create',
              '--description', 'Instalasi awal ConstOS', '--cleanup-algorithm', 'number'])
 
 
@@ -291,14 +297,17 @@ def dialog(*args):
 
 def launch():
     require_live()
-    # Uji executable/library sebelum pengguna memilih atau mengonfirmasi disk.
-    command(['calamares', '--version'], stdout=subprocess.DEVNULL)
     WORK.mkdir(mode=0o700, exist_ok=True)
     WORK.chmod(0o700)
     with (WORK / 'lock').open('w') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if (WORK / 'root').exists():
             raise RuntimeError('Ada mount instalasi sebelumnya. Reboot ISO sebelum mencoba lagi.')
+        # Simpan juga error loader/branding yang terjadi sebelum logger Qt siap.
+        log_path = WORK / 'calamares.log'
+        with log_path.open('w') as log:
+            os.fchmod(log.fileno(), 0o600)
+            command(['calamares', '--version'], stdout=log, stderr=subprocess.STDOUT)
         rows = json.loads(capture(['lsblk', '--json', '--paths', '--output', 'PATH,TYPE']))['blockdevices']
         eligible = []
         for row in rows:
@@ -321,7 +330,9 @@ def launch():
             raise RuntimeError('Konfirmasi path disk tidak cocok; tidak ada perubahan disk.')
         (WORK / 'disk.json').write_text(json.dumps(disk))
         try:
-            return command(['calamares', '--config', '/usr/share/constos/installer/calamares']).returncode
+            with log_path.open('a') as log:
+                return command(['calamares', '--config', '/usr/share/constos/installer/calamares'],
+                               stdout=log, stderr=subprocess.STDOUT).returncode
         finally:
             unmount()
 
@@ -346,7 +357,7 @@ if __name__ == '__main__':
         if error.cmd[0] == 'zenity' and error.returncode == 1:
             sys.exit(0)
         subprocess.run(['zenity', '--error', '--no-markup', '--text',
-                        f'Instalasi dihentikan. Periksa /var/log/Calamares.log dan /run/constos-installer/pacman.log.\n{error}'])
+                        f'Instalasi dihentikan. Periksa /run/constos-installer/calamares.log dan /run/constos-installer/pacman.log.\n{error}'])
         sys.exit(1)
     except Exception as error:
         subprocess.run(['zenity', '--error', '--no-markup', '--text', str(error)])

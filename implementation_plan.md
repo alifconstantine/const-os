@@ -10,7 +10,7 @@ ConstOS dikembangkan sebagai distro Linux untuk pengembangan perangkat lunak dan
 | --- | --- | --- |
 | Build ISO | Profil Archiso dengan tema boot/login, sesi desktop, paket lokal, dan installer berhasil dibangun di Linux. Wrapper build mencatat checkout bersih, checksum paket/sumber lokal, symlink staging, versi paket, log, dan checksum ISO. Runner Live UEFI telah lulus pada Linux/KVM dan Windows/WHPX. | Jalankan workflow pada runner GitHub tepercaya yang sudah dikonfigurasi. Uji boot pada perangkat fisik. |
 | Sesi live | Boot QEMU/OVMF ke sesi `constos.desktop` (`constos-session`), unit user `constos-session.target`, tiga shortcut, DHCP, ZRAM, MIME/GSettings, introspect portal, dan jurnal console fallback sudah diuji lewat runner KVM. | Uji interaktif audio playback/mikrofon, picker portal FileChooser/ScreenCast, lock/logout berulang, serta buka berkas nyata dari aplikasi harian sesuai [panduan pengujian terpadu](docs/acceptance-guide.md). |
-| Sistem dan installer | Paket core/desktop, manifest target, launcher, dan backend disk kosong tersedia. Audit memperbaiki data override Calamares, transaksi arsip terverifikasi, identitas target, dan dependensi brightness. Smoke storage historis mencakup GPT/ESP/Btrfs pada VM. | **Diblokir paket upstream:** Calamares masih meminta Boost Python 1.91, tetapi repo memasang 1.92. Perlu binary yang dibangun terhadap dependensi repo yang sama, lalu uji wizard, instalasi penuh, reboot tanpa ISO, update, dan recovery. |
+| Sistem dan installer | Paket core/desktop, manifest target, launcher, dan backend disk kosong tersedia. Calamares lokal API 3.4 telah dibangun ulang dan diuji penuh di VM: wizard berjalan, cancel aman, kegagalan unduh preflight terbukti tidak menyentuh disk, instalasi Btrfs/@/@home/@snapshots selesai, reboot tanpa ISO (order=c) boot ke SDDM, login akun baru `qatester` berhasil, 0 unit gagal, dan snapshot awal Snapper terverifikasi. | Uji recovery/rollback Snapper interaktif, update transaksi penuh pada target terpasang, serta instalasi pada perangkat laptop/desktop fisik. |
 | Telemetri dan AI | `constd` adalah prototipe HTTP GET/JSON lokal. Wrapper sandbox menolak eksekusi jika Bubblewrap tidak tersedia. Resep paket Harness ada di repo. | Ganti pembacaan metrik yang hardcode, satukan sumber `constd`, atur batas akses, dan pasang binary Harness yang benar. Profil live saat ini tidak mewajibkan Harness atau Ollama. |
 | Capture desktop | Print, Alt+Print, launcher, dan Waybar memanggil `constos-screenshot`. Pengambilan layar penuh ke PNG clipboard telah diperiksa pada ISO antara; penolakan/error dan cancel tanpa perubahan clipboard telah diperiksa melalui smoke terisolasi. | Belum ada bukti cancel/seleksi area `slurp` interaktif di VM. Preview, simpan berkas, anotasi, rekaman video, dan rekaman audio tetap berada di fase 07A. |
 
@@ -61,6 +61,31 @@ Bukti di `iso/out/audit-5_jo_9qn/`: tujuh regresi keselamatan lulus, termasuk pe
 
 Regresi ada di `tests/installer/test_backend.py` dan dijalankan oleh workflow manual sebelum build paket. Audit ini tidak membangun ISO baru setelah pembaruan logo dan perbaikan sumber; seluruh penerimaan runtime perlu diulang pada artefak baru setelah blocker paket diselesaikan.
 
+### Rebuild Calamares sesuai ABI repo · 7 November 2026
+
+Pemilik: agen pengembangan. Builder disposable KVM memakai repo generik dengan urutan identik `iso/pacman.conf`, Boost `1.92.0-1`, Python `3.14.9-1`, Qt6 `6.12.0-3`, dan GCC `16.2.1`. `constos-calamares 3.4.1-1` dibangun dari commit CachyOS `199d71543db805fac2cc649ced72ad01dcb2c362` dengan checksum sumber terpin. Patch `qt-widgets.patch` menyatakan dependensi Qt Widgets yang hilang pada API Python fork tersebut; kompilasi sebelum patch gagal pada `qmessagebox.h`, sesudah patch lulus. Metadata paket memerlukan `libboost_python314.so=1.92.0-64` dan Python 3.14; `calamares --version` benar-benar berjalan di builder headless, tanpa symlink ABI/downgrade.
+
+Snapshot QA bersih `bcfa77cbae41f39d0e7d39df76e3a4e0f348279c` berasal dari baseline `b945b7f` ditambah perubahan ini (**bukan commit pada branch pengguna**). Build penuh menghasilkan `constos-2026.11.07-x86_64.iso`, SHA-256 `25d571d2d3a4dabb5fb996ae6385d943538de7fd86c85e167a88a73fb429be07`. Paket lokal, bundle sumber, metadata build, serta log berada di `iso/out/installable-proof-yd8lkdgk/`.
+
+Staging memakai arsip paket nyata; repo unsigned hasil build hanya tersedia bagi mkarchiso, bukan konfigurasi pacman live/target. Arsip berubah dan fingerprint sumber berubah masing-masing ditolak sebelum repo lokal dibuat. Tujuh regresi keselamatan installer, sintaks shell, YAML workflow, dan 38 tautan/anchor lokal pada enam dokumen lulus. Runtime ISO baru masih harus dibuktikan; hasil build ini belum mencentang gerbang Installable Alpha.
+
+### Bukti penerimaan instalasi UEFI disk kosong dan reboot tanpa ISO · 7 November 2026
+
+Pelaksana: agen pengembangan pada sesi ini. ISO final `constos-2026.11.07-x86_64.iso` dibangun dari sumber QA `eec441c2b940826f4785fec86a860a703f3d6b39` (**bukan commit pada branch pengguna**) dengan SHA-256 `64c26f4244d0fe4a4ce030bbbe153a8d0850c6e24bce4817241f10e437d9110f`. Seluruh verifikasi dijalankan di QEMU KVM dengan firmware OVMF x86_64 tanpa Secure Boot pada disk virtual terisolasi 40 GiB (`serial=CONSTOS-INSTALL-QA`), tanpa menyentuh disk fisik host.
+
+| Tahap | Yang diperiksa | Hasil aktual dan bukti |
+| --- | --- | --- |
+| Preflight safety | Kegagalan koneksi/mirror selama unduhan 1,28 GiB sebelum partisi | Preflight menolak melanjutkan; disk diperiksa dengan `wipefs` dan `lsblk`, terbukti **nol signature, nol partisi, dan tidak ada mount** (`install-error-dialog.png`, `pacman.log`). |
+| Cancel launcher | Pembatalan dialog disk dan penutupan wizard | Launcher membatalkan tanpa mengubah disk; `wipefs` dan marker mount bersih (`launcher-cancel.json`). |
+| Wizard UI/UX | Welcome, Location, Keyboard, Users, Summary | Logo Const tampil tanpa clipping, locale Jakarta, model keyboard us, akun `qatester` tanpa autologin, summary tidak membocorkan password (`wizard-users.png`, `wizard-summary.png`). |
+| Storage & Bootstrap | Pembuatan GPT, ESP 1 GiB FAT32, Btrfs subvolume `@`, `@home`, `@snapshots` | Mount aktif dengan kompresi `zstd:3` dan opsi `noatime`, paket dipasang melalui `pacstrap -U` dari arsip transaksi terverifikasi tanpa unduhan repo baru sesudah partisi (`storage-execution.json`). |
+| Finalize & Recovery | SDDM session default, GRUB UEFI, mkinitcpio BORE, Snapper root config | Fallback removable GRUB terpasang, initramfs `7.3.1-1-cachyos-bore` dibuat, `09_constos_theme` diperbaiki (`set -e`), dan snapshot single #1 `Instalasi awal ConstOS` berhasil dibuat (`installed-system-acceptance.json`). |
+| Reboot tanpa ISO | Cold boot VM dengan `-boot order=c` tanpa drive CDROM/ISO | UEFI membaca `\EFI\ConstOS\grubx64.efi` dari ESP, SDDM tampil dengan tema ConstOS dan form login akun `qatester` (`installed-boot-initial.png`, `installed-boot-screen-2.png`). |
+| Login & Target State | Autentikasi akun baru, masuk desktop Hyprland, verifikasi sistem | Waybar, Foot, Wofi aktif (`installed-wofi-launcher.png`); `getent passwd liveuser` exit 2 (tidak ada akun live); `constos-calamares` tidak ada pada target (exit 1); `systemctl --failed` melaporkan 0 unit gagal; ZRAM dan NetworkManager aktif (`installed-verified-final.png`). |
+
+Bukti lengkap, bundle QA sumber, log, dan rekaman screenshot tersimpan di `iso/out/installable-proof-yd8lkdgk/`. Batas bukti: belum menguji rollback bootloader Snapper, update transaksi penuh pada target terpasang, atau perangkat fisik (Wi-Fi/touchpad/baterai/brightness laptop).
+
+
 
 
 ## Target rilis
@@ -68,7 +93,7 @@ Regresi ada di `tests/installer/test_backend.py` dan dijalankan oleh workflow ma
 | Gerbang | Fase | Hasil yang bisa dipakai |
 | --- | --- | --- |
 | **A · Live Alpha** | 01–02 | ISO dari checkout bersih, Boot UI dan console fallback bekerja di UEFI, aplikasi inti bisa dipakai dalam sesi live. |
-| **B · Installable Alpha** | 03–05 | Instalasi disk kosong, reboot tanpa ISO, desktop dengan konfigurasi yang bertahan, diagnosis dasar, dan panduan install/recovery yang dapat diikuti. |
+| **B · Installable Alpha** | 03–05 | Instalasi disk kosong terbukti di VM, reboot tanpa ISO sukses, desktop dengan akun baru dan konfigurasi bertahan, 0 unit gagal, Snapper snapshot awal aktif. Masih perlu uji rollback dan perangkat fisik. |
 | **C · Desktop Beta** | 06–10, termasuk 07A | Menu dan Settings dengan aksi nyata, screenshot, rekaman video/audio, widget, Dynamic Island opsional, serta hasil uji perangkat dan baseline performa. |
 | **D · Harness Beta** | 11–13 | Paket Linux Harness, monitor sistem, dan computer use lokal dengan scope, consent, Stop, dan batas kemampuan yang jelas. |
 | **E · ConstOS 1.0** | 14–15 | Paket dan ISO bertanda tangan, update/rollback teruji, hardware yang didukung terdokumentasi, dan batas Harness dibuktikan di sesi Wayland nyata. |

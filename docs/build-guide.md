@@ -7,28 +7,36 @@ Profil awal menargetkan **x86_64 UEFI** dengan GRUB, kernel CachyOS BORE, dan Hy
 Clone repo di filesystem Linux pada host CachyOS x86_64 agar symlink systemd ikut terpasang. Pasang perkakas dan siapkan kepercayaan paket sebelum build.
 
 ```bash
-sudo pacman -Syu --needed archiso base-devel git python cachyos-keyring archlinux-keyring grub squashfs-tools dosfstools mtools libisoburn
+sudo pacman -Syu --needed archiso base-devel git python cachyos-keyring archlinux-keyring \
+  grub squashfs-tools dosfstools mtools libisoburn boost cmake extra-cmake-modules ninja \
+  qt6-tools ckbcomp kcoreaddons libpwquality libxcrypt polkit-qt6 qt6-base \
+  qt6-declarative qt6-svg qt6-wayland xkeyboard-config yaml-cpp
 sudo pacman-key --populate archlinux cachyos
 ```
 
 Paket diambil dari repositori CachyOS x86_64 generik dan repositori Arch. Untuk host Arch, siapkan keyring CachyOS melalui [petunjuk upstream](https://github.com/CachyOS/linux-cachyos#installation) sebelum memakai profil ini.
 
-**Blocker installer saat audit:** `cachyos-calamares 3.4.2-4` dan varian `next 3.4.2-13` masih meminta `libboost_python314.so.1.91.0`, sedangkan repo sekarang menyediakan Boost 1.92. Build/staging saja tidak mendeteksi ini. Jangan membuat symlink ABI atau downgrade parsial. Diperlukan paket Calamares yang dibangun terhadap dependensi repo yang sama; periksa `calamares --version` dalam sesi live sebelum pengujian wizard.
+**Temuan ABI pada paket lama:** `cachyos-calamares 3.4.2-4` dan varian `next 3.4.2-13` meminta `libboost_python314.so.1.91.0`, sedangkan repo menyediakan Boost 1.92. Jalur build kini memakai paket lokal hasil rebuild; jangan kembali ke binary lama, membuat symlink ABI, atau downgrade parsial. Build/staging saja tidak membuktikan wizard dapat berjalan: periksa `calamares --version` dalam sesi live sebelum pengujian.
+
+Jalur rebuild ada di `packages/constos-calamares/PKGBUILD`: sumber [CachyOS Calamares `199d715`](https://github.com/CachyOS/cachyos-calamares/tree/199d71543db805fac2cc649ced72ad01dcb2c362), SHA-256 arsip `4670ed9b5fe9e185437fdb0a65638329b8b727973d6f4f7f1992d5bc33a593db`, lisensi GPL-3.0-or-later. Versi CMake sumber ini adalah **3.4.1/API 3.4**, bukan label paket upstream 3.4.2. Gunakan repo generik dengan urutan sama seperti `iso/pacman.conf` pada builder terisolasi; host dengan repo CPU-tier berbeda bukan bukti kecocokan ABI ISO. `makepkg` mengisi dependensi SONAME Boost Python dari hasil link, dan resep membatasi Python 3.14. Rebuild diperlukan ketika ABI berubah. Helper memakai dua proses build secara default; override melalui `CMAKE_BUILD_PARALLEL_LEVEL` sesuai kapasitas VM.
+
+Patch `qt-widgets.patch` menambahkan dependensi target Qt Widgets untuk implementasi `show_warning()` pada API Python fork yang dipatok tersebut. Tanpa patch, kompilasi gagal karena `qmessagebox.h` tidak ditemukan. Fingerprint helper mencakup resep dan patch; jangan menerapkan patch hanya pada direktori kerja build.
 
 ## Rakit profil dan ISO
 
 Jalankan dari root repo. Staging dapat diperiksa tanpa hak root.
 
 ```bash
-# Staging non-root juga membangun paket lokal ke direktori profil baru.
-bash iso/buildiso.sh --stage-only
-# Untuk build penuh, siapkan artefak sebagai user biasa sebelum sudo.
+# Semua paket dibuat sebagai user biasa sebelum build root.
 packages="$PWD/iso/out/packages-$(date -u +%Y%m%dT%H%M%SZ)"
+calamares="${packages}-calamares"
 bash packages/build-local.sh "$packages"
-sudo bash iso/buildiso.sh --packages-dir "$packages" -v
+bash packages/build-calamares.sh "$calamares"
+bash iso/buildiso.sh --stage-only --packages-dir "$packages" --calamares-dir "$calamares"
+sudo bash iso/buildiso.sh --packages-dir "$packages" --calamares-dir "$calamares" -v
 ```
 
-Staging menyalin profil Archiso dan memanggil `desktop/install.sh`, `iso/install-boot.sh ROOT live`, serta `installer/install.sh`. Desktop diletakkan di `/etc/skel/.config` untuk akun live; tema dan launcher dipasang pada path sistem. Dua paket target dan checksum disertakan di `/usr/share/constos/packages`, bukan sebagai repositori sementara pada target. `SOURCE_SHA256SUMS` diperiksa terhadap sumber checkout agar paket lama tidak diam-diam dipasangkan dengan overlay baru. Setiap run memakai direktori kerja baru di `iso/work/`. `-w DIR`, `-o DIR`, dan `--packages-dir DIR` mengubah lokasi kerja, output, serta input paket. ISO muncul di `iso/out/constos-*.iso` secara default. `makepkg` tidak dijalankan sebagai root; staging root juga memerlukan artefak yang sudah dibuat.
+Staging menyalin profil Archiso dan memanggil `desktop/install.sh`, `iso/install-boot.sh ROOT live`, serta `installer/install.sh`. Desktop diletakkan di `/etc/skel/.config` untuk akun live; tema dan launcher dipasang pada path sistem. Dua paket target dan checksum disertakan di `/usr/share/constos/packages`. Paket `constos-calamares` masuk repo lokal **khusus mkarchiso**, bukan konfigurasi pacman live atau target. `SHA256SUMS` memeriksa arsip dan `SOURCE_SHA256SUMS` mencocokkan sumber masing-masing builder dengan checkout. Kepercayaan tanpa signature hanya berlaku untuk repo lokal hasil build tersebut; signature repo jaringan tetap diwajibkan. Setiap run memakai direktori kerja baru di `iso/work/`. `-w DIR`, `-o DIR`, `--packages-dir DIR`, dan `--calamares-dir DIR` mengubah lokasi kerja, output, serta input paket. ISO muncul di `iso/out/constos-*.iso` secara default. `makepkg` tidak dijalankan sebagai root.
 
 ## Ekspor logo
 
@@ -63,8 +71,10 @@ Gunakan checkout Git bersih, termasuk tanpa berkas untracked di luar path ignore
 mkdir -p iso/out
 build="$PWD/iso/out/live-$(date -u +%Y%m%dT%H%M%SZ)"
 packages="${build}-packages"
+calamares="${build}-calamares"
 bash packages/build-local.sh "$packages"
-sudo -n bash tests/live/build.sh --output "$build" --packages-dir "$packages"
+bash packages/build-calamares.sh "$calamares"
+sudo -n bash tests/live/build.sh --output "$build" --packages-dir "$packages" --calamares-dir "$calamares"
 iso=$(python3 -c 'import json,pathlib,sys; p=pathlib.Path(sys.argv[1]); print(p/json.loads((p/"build.json").read_text())["iso_filename"])' "$build")
 python3 tests/live/uefi_smoke.py \
   --iso "$iso" --build-evidence "$build/build.json" \

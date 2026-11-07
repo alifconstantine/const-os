@@ -124,7 +124,7 @@ xorg-xauth
 plymouth
 
 # --- Installer khusus live; target tidak menyalin overlay ISO ---
-cachyos-calamares
+constos-calamares
 zenity
 
 # --- ConstOS Core Packages ---

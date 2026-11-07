@@ -33,7 +33,7 @@ Arsitektur komponen, batas izin, dan pemisahan profil live dari sistem terpasang
 | Kernel dan proses | Manifest live memilih kernel CachyOS BORE. Prototipe `constd` membaca load average dan sampel state proses. |
 | Boot dan login | Sumber tema GRUB, Plymouth, dan SDDM memakai palet hitam/putih/biru. Penerimaan tema dan jalur fallback dicatat terpisah dari bukti boot baseline. |
 | Memori dan ZRAM | Overlay live mengatur `zram-generator` dengan `zstd`, `vm.swappiness = 100`, dan `vm.vfs_cache_pressure = 50`. |
-| Storage dan installer | Backend UEFI disk kosong serta konfigurasi Btrfs/Snapper tersedia. Installer diblokir ketidakcocokan ABI Boost pada paket Calamares upstream; instalasi penuh dan recovery belum lulus. Detail di roadmap. |
+| Storage dan installer | Backend UEFI disk kosong serta konfigurasi Btrfs/Snapper terbukti di VM. Calamares lokal API 3.4 telah dibangun ulang dan lulus uji: wizard, cancel aman, instalasi Btrfs/@/@home/@snapshots, reboot tanpa ISO (order=c), SDDM, dan login akun baru berfungsi dengan 0 unit gagal. Rollback bootloader dan hardware fisik masih perlu diuji. Detail di roadmap. |
 | Telemetri dan integrasi Harness | `constd` punya prototipe HTTP GET/JSON. Integrasi dengan Harness dan transport MCP masih direncanakan. |
 | Sandbox dan izin | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
 | Screenshot dan rekaman | Print, Alt+Print, launcher, serta Waybar memakai satu helper screenshot area/seluruh desktop dengan clipboard dan cancel. Dukungan runtime mengikuti bukti di roadmap; preview/anotasi serta recorder tetap di fase 07A. |
@@ -77,11 +77,12 @@ ConstOS/
 Lihat panduan lengkap di [docs/build-guide.md](docs/build-guide.md).
 
 ```bash
-bash iso/buildiso.sh --stage-only
-# Artefak target dibuat sebagai user biasa, lalu diberikan ke build root.
 packages="$PWD/iso/out/packages-$(date -u +%Y%m%dT%H%M%SZ)"
+calamares="${packages}-calamares"
 bash packages/build-local.sh "$packages"
-sudo bash iso/buildiso.sh --packages-dir "$packages" -v
+bash packages/build-calamares.sh "$calamares"
+bash iso/buildiso.sh --stage-only --packages-dir "$packages" --calamares-dir "$calamares"
+sudo bash iso/buildiso.sh --packages-dir "$packages" --calamares-dir "$calamares" -v
 ```
 
 ---

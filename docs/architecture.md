@@ -11,7 +11,7 @@ Dokumen ini menjelaskan batas komponen dan arah desain. Status serta bukti pener
 | Build dan boot | Profil Archiso di `iso/`, kernel CachyOS BORE, tema GRUB/Plymouth/SDDM, dan `iso/install-boot.sh`. Roadmap mencatat bukti build baseline serta verifikasi integrasi terbaru. | CI Linux, pembuktian seluruh skenario Boot UI di VM baru, dan bukti perangkat fisik. BIOS, Secure Boot, dan varian kernel/CPU bukan dukungan implisit. |
 | Desktop live | `desktop/install.sh` memasang sesi `constos.desktop` → `constos-session`, Lua Hyprland, unit user `constos-session.target`, tema fallback, portal, MIME, dan override GSettings. | Shell/Settings Quickshell/QML masih perlu spike fokus, multi-monitor, aksesibilitas, dan performa. Fallback tetap tersedia selama cutover. |
 | Screenshot dan media | `constos-screenshot` dipakai oleh Print, Alt+Print, launcher, dan Waybar; seleksi dibatalkan tanpa menimpa clipboard. | Pembuktian pada sesi live/installed penuh, lalu UI screenshot, editor anotasi, recorder video, dan recorder audio di fase 07A. |
-| Sistem dan storage | Konfigurasi ZRAM/sysctl, paket `constos-core`/`constos-desktop`, serta launcher/backend Calamares untuk disk UEFI kosong tersedia. | Bukti instalasi penuh ke disk, reboot tanpa ISO, update, dan recovery sistem sebelum label Installable Alpha. |
+| Sistem dan storage | Konfigurasi ZRAM/sysctl, paket `constos-core`/`constos-desktop`, serta launcher/backend Calamares untuk disk UEFI kosong. Pembuktian instalasi Btrfs, reboot tanpa ISO, dan login akun baru di SDDM telah lulus di VM. | Uji recovery/rollback Snapper dari bootloader dan verifikasi perangkat fisik sebelum ConstOS 1.0. |
 | Telemetri | Prototipe Python `constd` HTTP GET/JSON. | Satu collector Rust bersama, CLI `constosctl`, dan IPC sesi bertipe. HTTP lama dihapus ketika konsumen sudah bermigrasi. |
 | Harness dan sandbox | Resep paket Harness dan wrapper Bubblewrap tersedia. | Paket Linux lengkap, helper computer use sesi pengguna, izin per capability, dan sandbox teruji. Keberadaan wrapper bukan bukti seluruh workspace/desktop sudah terisolasi. |
 | Aset | Master simbol Const di `assets/const-logo.svg`, ekspor boot/ikon di `assets/exports/`, serta manifest logo tersedia. Tema berada di `desktop/`. | Audit hak logo, aset lain, dan penerimaan boot baru masih diperlukan; pemilihan logo bukan bukti lisensi redistribusi. |
@@ -45,7 +45,7 @@ flowchart TD
 | `iso/` | Profil Archiso, manifest live, GRUB, helper `install-boot.sh`, overlay, staging, dan pemanggilan `mkarchiso`. Artefak kerja/output bukan sumber konfigurasi. |
 | `installer/` | Launcher, konfigurasi Calamares, modul job Python, manifest target, dan backend pemasangan UEFI disk kosong. |
 | `desktop/` | Sumber sesi, keybind, tema boot/fallback, unit user, helper screenshot/lock, portal, dan MIME. Hanya file yang dipasang `desktop/install.sh` atau `iso/install-boot.sh` boleh disebut efektif. |
-| `packages/` | Builder dan resep `constos-core`/`constos-desktop` serta resep Harness. Paket Harness belum menyertakan binary upstream. |
+| `packages/` | Builder dan resep `constos-core`/`constos-desktop`, `constos-calamares` khusus live, serta resep Harness. Paket Harness belum menyertakan binary upstream. |
 | `daemons/` | Prototipe daemon saat ini. Jangan menambah salinan collector baru untuk setiap UI. |
 | `assets/` | Aset visual sumber/ekspor yang dipakai, dengan provenance dan lisensi yang perlu dicatat. |
 | `docs/` | Arsitektur dan panduan teknis; tidak menyalin backlog atau menyimpan bukti media mentah. |
@@ -53,6 +53,8 @@ flowchart TD
 | `crates/`, `system/` | Lokasi yang direncanakan untuk Rust dan kebijakan sistem; buat saat implementasinya diperlukan. |
 
 `iso/buildiso.sh` dan paket `constos-desktop` memanggil `desktop/install.sh` serta `iso/install-boot.sh`, sehingga sesi live dan sistem terpasang berbagi sumber desktop/boot yang sama dengan mode konfigurasi yang sesuai. File `.conf` Hyprland lama telah dihapus; sisa file di `desktop/` yang tidak dipasang helper tidak mengubah sesi.
+
+`packages/build-calamares.sh` membangun sumber Calamares yang dipatok commit dan checksum terhadap repo generik yang sama dengan ISO. Resep menyertakan dependensi SONAME Boost Python dan batas versi Python agar pergantian ABI tidak diterima diam-diam. `iso/buildiso.sh --calamares-dir DIR` memeriksa checksum arsip/sumber, lalu membuat repo lokal hanya pada konfigurasi build mkarchiso. Config pacman live disalin sebelum repo tersebut ditambahkan; config target berasal dari `installer/pacman.conf`. Installer Calamares dan repo build tidak ikut ke target terpasang.
 
 ## Batas proses dan kepercayaan
 

@@ -25,7 +25,7 @@ jobs:
 
       # Runner harus sudah CachyOS x86_64 dengan keyring terinisialisasi,
       # dependency Archiso, QEMU dengan virtio-vga, OVMF, tesseract (eng), Python 3, dan sudo -n.
-      # Tidak ada instalasi paket atau perbaikan checkout di workflow ini.
+      # Dependency build Calamares juga harus tersedia; workflow tidak memasang paket.
       - name: Periksa host dan siapkan direktori bukti baru
         id: paths
         shell: bash
@@ -51,7 +51,7 @@ jobs:
             echo 'Firmware OVMF_CODE/OVMF_VARS harus file yang dapat dibaca user runner.' >&2
             exit 1
           }
-          for tool in sudo python3 qemu-system-x86_64 tesseract mkarchiso pacman git makepkg; do
+          for tool in sudo python3 qemu-system-x86_64 tesseract mkarchiso pacman git makepkg repo-add cmake ninja; do
             command -v "$tool" >/dev/null || {
               printf 'Tool runner belum tersedia: %s\n' "$tool" >&2
               exit 1
@@ -74,6 +74,7 @@ jobs:
         run: |
           set -euo pipefail
           bash packages/build-local.sh "$EVIDENCE_ROOT/packages"
+          bash packages/build-calamares.sh "$EVIDENCE_ROOT/calamares"
 
       - name: Build ISO dan simpan identitas checkout serta checksum
         shell: bash
@@ -81,7 +82,9 @@ jobs:
           BUILD_DIR: ${{ steps.paths.outputs.build }}
         run: |
           set -euo pipefail
-          sudo -n bash tests/live/build.sh --output "$BUILD_DIR" --packages-dir "$(dirname -- "$BUILD_DIR")/packages"
+          sudo -n bash tests/live/build.sh --output "$BUILD_DIR" \
+            --packages-dir "$(dirname -- "$BUILD_DIR")/packages" \
+            --calamares-dir "$(dirname -- "$BUILD_DIR")/calamares"
 
       - name: Cold boot desktop dan console fallback sebagai user biasa
         shell: bash
@@ -118,6 +121,8 @@ jobs:
             ${{ steps.paths.outputs.build }}/*.iso.sha256
             ${{ steps.paths.outputs.build }}/local-packages.sha256
             ${{ steps.paths.outputs.build }}/package-sources.sha256
+            ${{ steps.paths.outputs.build }}/installer-packages.sha256
+            ${{ steps.paths.outputs.build }}/installer-sources.sha256
             ${{ steps.paths.outputs.smoke }}/**/*.json
             ${{ steps.paths.outputs.smoke }}/**/*.log
             ${{ steps.paths.outputs.smoke }}/**/*.txt
