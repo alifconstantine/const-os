@@ -13,5 +13,5 @@ diff --git a/src/libcalamares/CMakeLists.txt b/src/libcalamares/CMakeLists.txt
      target_sources(calamares PRIVATE python/Api.cpp python/Variant.cpp)
 +    target_link_libraries(calamares PRIVATE ${qtname}::Widgets)
  endif()
-
+ 
  ### OPTIONAL GeoIP XML support

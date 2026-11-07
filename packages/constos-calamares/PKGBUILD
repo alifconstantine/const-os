@@ -37,7 +37,7 @@ _commit=199d71543db805fac2cc649ced72ad01dcb2c362
 source=("calamares-$_commit.tar.gz::https://codeload.github.com/CachyOS/cachyos-calamares/tar.gz/$_commit"
         'qt-widgets.patch')
 sha256sums=('4670ed9b5fe9e185437fdb0a65638329b8b727973d6f4f7f1992d5bc33a593db'
-            '3e0c4364bb8f51ade35790e879384c4f140c467ae92dacbe2b91cb1085c42a43')
+            'bc346dbdc3c39dc08b091309f5621b1c0ebcd67108aaddb436c33d9212c08731')
 
 prepare() {
   patch -d "$srcdir/cachyos-calamares-$_commit" -p1 < "$srcdir/qt-widgets.patch"
