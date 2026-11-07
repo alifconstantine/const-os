@@ -8,11 +8,11 @@ windowPlacement: center
 slideshow: [ logo-black.svg ]
 
 strings:
-    productName:         ConstOS
+    productName:         Const Tsukuyomi
     version:             Alpha
     shortVersion:        Alpha
-    versionedName:       ConstOS Alpha
-    shortVersionedName:  ConstOS Alpha
+    versionedName:       Const Tsukuyomi Alpha
+    shortVersionedName:  Const Tsukuyomi
     bootloaderEntryName: ConstOS
     productUrl:          https://github.com/alifconstantine/const-os
     supportUrl:          https://github.com/alifconstantine/const-os/issues

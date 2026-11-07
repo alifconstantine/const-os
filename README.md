@@ -5,9 +5,9 @@
   <img src="assets/exports/const-logo-black.svg" alt="ConstOS — simbol Const" width="160"/>
 </picture>
 
-# ConstOS
+# Const Tsukuyomi
 
-**Distribusi Linux berbasis CachyOS dengan Hyprland**
+**Distribusi Linux monokrom berbasis CachyOS dengan Hyprland**
 
 [![Arch Linux](https://img.shields.io/badge/Base-CachyOS%20%28Arch%29-1793d1?logo=arch-linux&logoColor=white)](#)
 [![Compositor](https://img.shields.io/badge/Compositor-Hyprland%20Wayland-00a8ff)](#)

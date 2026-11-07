@@ -4,7 +4,7 @@
 iso_name="constos"
 iso_label="CONSTOS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="ConstOS Project <https://github.com/alifconstantine/const-os>"
-iso_application="ConstOS Live Desktop"
+iso_application="Const Tsukuyomi Live Desktop"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="arch"
 buildmodes=('iso')
