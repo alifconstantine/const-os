@@ -22,6 +22,9 @@ dist-electron/
 .turbo/
 .pnpm-store/
 
+
+# Rust build artifacts
+target/
 # Python cache & virtualenvs
 __pycache__/
 *.py[cod]

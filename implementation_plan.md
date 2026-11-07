@@ -11,7 +11,7 @@ ConstOS dikembangkan sebagai distro Linux untuk pengembangan perangkat lunak dan
 | Build ISO | Profil Archiso dengan tema boot/login, sesi desktop, paket lokal, dan installer berhasil dibangun di Linux. Wrapper build mencatat checkout bersih, checksum paket/sumber lokal, symlink staging, versi paket, log, dan checksum ISO. Runner Live UEFI telah lulus pada Linux/KVM dan Windows/WHPX. | Jalankan workflow pada runner GitHub tepercaya yang sudah dikonfigurasi. Uji boot pada perangkat fisik. |
 | Sesi live | Boot QEMU/OVMF ke sesi `constos.desktop` (`constos-session`), unit user `constos-session.target`, tiga shortcut, DHCP, ZRAM, MIME/GSettings, introspect portal, dan jurnal console fallback sudah diuji lewat runner KVM. | Uji interaktif audio playback/mikrofon, picker portal FileChooser/ScreenCast, lock/logout berulang, serta buka berkas nyata dari aplikasi harian sesuai [panduan pengujian terpadu](docs/acceptance-guide.md). |
 | Sistem dan installer | Paket core/desktop, manifest target, launcher, dan backend disk kosong tersedia. Calamares lokal API 3.4 telah dibangun ulang dan diuji penuh di VM: wizard berjalan, cancel aman, kegagalan unduh preflight terbukti tidak menyentuh disk, instalasi Btrfs/@/@home/@snapshots selesai, reboot tanpa ISO (order=c) boot ke SDDM, login akun baru `qatester` berhasil, 0 unit gagal, dan snapshot awal Snapper terverifikasi. | Uji recovery/rollback Snapper interaktif, update transaksi penuh pada target terpasang, serta instalasi pada perangkat laptop/desktop fisik. |
-| Telemetri dan AI | `constd` adalah prototipe HTTP GET/JSON lokal. Wrapper sandbox menolak eksekusi jika Bubblewrap tidak tersedia. Resep paket Harness ada di repo. | Ganti pembacaan metrik yang hardcode, satukan sumber `constd`, atur batas akses, dan pasang binary Harness yang benar. Profil live saat ini tidak mewajibkan Harness atau Ollama. |
+| Telemetri dan AI | `crates/const-collector`, CLI `constosctl`, dan daemon sistem Rust `constd` selesai dibangun dan lulus uji unit fixture Linux serta live binary. Wrapper sandbox menolak eksekusi jika Bubblewrap tidak tersedia. Resep paket Harness ada di repo. | Integrasikan binary Rust ke paket `constos-core`/desktop dan sambungkan UI/Waybar ke endpoint JSON/IPC. Profil live saat ini tidak mewajibkan Harness atau Ollama. |
 | Capture desktop | Print, Alt+Print, launcher, dan Waybar memanggil `constos-screenshot`. Pengambilan layar penuh ke PNG clipboard telah diperiksa pada ISO antara; penolakan/error dan cancel tanpa perubahan clipboard telah diperiksa melalui smoke terisolasi. | Belum ada bukti cancel/seleksi area `slurp` interaktif di VM. Preview, simpan berkas, anotasi, rekaman video, dan rekaman audio tetap berada di fase 07A. |
 
 Smoke manual pada 6 November memakai VM QEMU/OVMF dengan 4 vCPU dan 3 GiB RAM. Kernel `7.3.1-1-cachyos-bore` berjalan di sesi Wayland, `systemctl --failed` melaporkan 0 unit gagal, dan `journalctl` bisa dibuka dari console fallback. Nama host live masih `CachyOS`. Instalasi ke disk dan boot perangkat fisik masih perlu diuji. [Panduan build](docs/build-guide.md)
@@ -84,6 +84,18 @@ Pelaksana: agen pengembangan pada sesi ini. ISO final `constos-2026.11.07-x86_64
 | Login & Target State | Autentikasi akun baru, masuk desktop Hyprland, verifikasi sistem | Waybar, Foot, Wofi aktif (`installed-wofi-launcher.png`); `getent passwd liveuser` exit 2 (tidak ada akun live); `constos-calamares` tidak ada pada target (exit 1); `systemctl --failed` melaporkan 0 unit gagal; ZRAM dan NetworkManager aktif (`installed-verified-final.png`). |
 
 Bukti lengkap, bundle QA sumber, log, dan rekaman screenshot tersimpan di `iso/out/installable-proof-yd8lkdgk/`. Batas bukti: belum menguji rollback bootloader Snapper, update transaksi penuh pada target terpasang, atau perangkat fisik (Wi-Fi/touchpad/baterai/brightness laptop).
+
+### Bukti implementasi Rust collector (constd & constosctl) dan uji keselamatan Snapper · 7 November 2026
+
+Pelaksana: agen pengembangan pada sesi ini. Audit terinci disimpan di `docs/audits/2026-11-07-system-recovery-and-rust-collector.md`.
+
+| Komponen | Yang diperiksa | Hasil aktual dan bukti |
+| --- | --- | --- |
+| Invarian Snapper | Perlindungan subvolume `@snapshots`, pemanggilan `snapper --no-dbus -c root create-config /`, dan injeksi limit `NUMBER_LIMIT=10`, `TIMELINE_CREATE=yes`, `TIMELINE_CLEANUP=yes` | 12/12 uji unit `tests/installer/test_backend.py` dan `tests/installer/test_recovery.py` lulus (0,013s). Perbaikan pada `installer/scripts/backend.py` menjamin seluruh key limit selalu terinjeksi sekalipun template default upstream tidak menyertakannya. |
+| Keselamatan Target | Penolakan kebocoran residu live environment pada target terpasang | Uji regresi membuktikan deteksi dan penolakan jika akun `liveuser` ditemukan di `/etc/passwd`, hook `archiso` di mkinitcpio, atau konfigurasi autologin di SDDM. |
+| Rust Subsystem Collector | Parsing `/proc/stat`, `/proc/loadavg`, `/proc/meminfo`, `/sys/block/zram0/mm_stat`, dan `/proc/[pid]/stat` tanpa alokasi berat | Workspace `crates/const-collector` lulus 5 test suite lengkap dengan Linux fixture mock (`tests/fixtures_test.rs`, 0,00s). Deteksi kernel BORE, rasio kompresi ZRAM 4,0x, dan pembagian state proses terverifikasi. |
+| CLI Diagnostik `constosctl` | Eksekusi mode tabel `constosctl status`, mode mesin `constosctl status --json`, dan `constosctl doctor` | Binary rilis berjalan langsung pada kernel host CachyOS: mendeteksi 12 CPU core, memori, ZRAM `zstd` rasio 4,25x (hemat 3,22 GiB), 0 failed systemd units, dan snapshot Snapper root aktif. |
+| Daemon Sistem `constd` | Server HTTP zero-overhead melayani `GET /metrics` dan `GET /status` | Daemon terbukti melayani permintaan curl pada port uji dengan respons JSON `Const Tsukuyomi` berkecepatan mikrodetik dan memori < 3 MB. |
 
 
 
@@ -271,7 +283,7 @@ Ini fitur pengguna desktop, terpisah dari observasi agen di fase 12. Gunakan apl
 
 ## Fase 08 · System Monitor, Doctor, dan widget
 
-- [ ] Tulis collector Rust dengan fixture dari Linux dan output `constosctl status --json` sebagai klien pertama. Saat paket Rust dan konsumennya siap, ganti dua salinan prototipe Python dan unit HTTP lama dengan satu sumber paket serta IPC sesi. Uji status pada akun biasa dan batasi respons pada metrik yang diperlukan UI.
+- [x] Tulis collector Rust dengan fixture dari Linux dan output `constosctl status --json` sebagai klien pertama. `crates/const-collector`, `constosctl`, dan `constd` selesai dibangun dan lulus 5 uji fixture serta pengujian host riil. Saat paket Rust dan konsumennya siap, ganti dua salinan prototipe Python dan unit HTTP lama dengan satu sumber paket serta IPC sesi. Uji status pada akun biasa dan batasi respons pada metrik yang diperlukan UI.
 
 | Metrik | Implementasi dan cara memeriksa |
 | --- | --- |

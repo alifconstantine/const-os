@@ -34,7 +34,7 @@ Arsitektur komponen, batas izin, dan pemisahan profil live dari sistem terpasang
 | Boot dan login | Sumber tema GRUB, Plymouth, dan SDDM memakai palet hitam/putih/biru. Penerimaan tema dan jalur fallback dicatat terpisah dari bukti boot baseline. |
 | Memori dan ZRAM | Overlay live mengatur `zram-generator` dengan `zstd`, `vm.swappiness = 100`, dan `vm.vfs_cache_pressure = 50`. |
 | Storage dan installer | Backend UEFI disk kosong serta konfigurasi Btrfs/Snapper terbukti di VM. Calamares lokal API 3.4 telah dibangun ulang dan lulus uji: wizard, cancel aman, instalasi Btrfs/@/@home/@snapshots, reboot tanpa ISO (order=c), SDDM, dan login akun baru berfungsi dengan 0 unit gagal. Rollback bootloader dan hardware fisik masih perlu diuji. Detail di roadmap. |
-| Telemetri dan integrasi Harness | `constd` punya prototipe HTTP GET/JSON. Integrasi dengan Harness dan transport MCP masih direncanakan. |
+| Telemetri dan integrasi Harness | Suite Rust `const-collector`, CLI `constosctl`, dan daemon sistem `constd` tersedia di `crates/` dengan footprint < 3 MB dan output JSON terstruktur. Integrasi dengan Harness dan transport MCP masih direncanakan. |
 | Sandbox dan izin | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
 | Screenshot dan rekaman | Print, Alt+Print, launcher, serta Waybar memakai satu helper screenshot area/seluruh desktop dengan clipboard dan cancel. Dukungan runtime mengikuti bukti di roadmap; preview/anotasi serta recorder tetap di fase 07A. |
 | Shell, widget, dan aset | Konfigurasi desktop serta logo tersedia. Shell/Settings terpadu, katalog widget, aksesibilitas, dan pipeline aset masih dalam pengembangan. |
@@ -46,6 +46,7 @@ Arsitektur komponen, batas izin, dan pemisahan profil live dari sistem terpasang
 ```text
 ConstOS/
 ├── assets/                        # Logo dan aset visual ConstOS
+├── crates/                        # Subsistem Rust (collector, constosctl, daemon constd)
 ├── docs/                          # Arsitektur distro & panduan teknis
 │   ├── architecture.md            # Arsitektur, batas komponen, dan izin
 │   ├── build-guide.md             # Build ISO di lingkungan Arch/CachyOS

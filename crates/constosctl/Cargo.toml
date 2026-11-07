@@ -1,0 +1,11 @@
+[package]
+name = "constosctl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "System inspection and diagnostic CLI for ConstOS"
+
+[dependencies]
+const-collector = { path = "../const-collector" }
+serde = { workspace = true }
+serde_json = { workspace = true }

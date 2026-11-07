@@ -265,7 +265,10 @@ def finalize(root):
               'TIMELINE_LIMIT_YEARLY': '0', 'NUMBER_CLEANUP': 'yes',
               'NUMBER_LIMIT': '10', 'NUMBER_LIMIT_IMPORTANT': '3'}
     for key, value in limits.items():
-        snapper_text = re.sub(rf'^{key}=.*$', f'{key}="{value}"', snapper_text, flags=re.M)
+        if re.search(rf'^{key}=', snapper_text, flags=re.M):
+            snapper_text = re.sub(rf'^{key}=.*$', f'{key}="{value}"', snapper_text, flags=re.M)
+        else:
+            snapper_text += f'{key}="{value}"\n'
     config.write_text(snapper_text)
     (root / '.snapshots').chmod(0o750)
     command(['arch-chroot', root, 'mkinitcpio', '-P'])
