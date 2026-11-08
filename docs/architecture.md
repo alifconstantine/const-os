@@ -74,6 +74,12 @@ Satu pemilik status menyinkronkan recorder, panel, dan notifikasi. Indikator akt
 
 Capture biasa tidak memberi izin computer use, tidak otomatis mengunggah hasil, dan tidak memasukkan frame/audio mentah ke log. Rekaman audio-only tidak meminta akses layar. Dukungan screen sharing aplikasi lain diuji terpisah dari perekaman berkas.
 
+### Kompatibilitas aplikasi
+
+Rancangan awal memakai manifest target untuk menyertakan Wine. Paket desktop terpasang memiliki handler MIME dan alur konfirmasi. Wine dan installer aplikasi berjalan sebagai pengguna biasa pada sesi Hyprland. Prefix dan shortcut terkelola dimiliki pengguna. Prefix terpisah membatasi benturan konfigurasi antar aplikasi, sedangkan akses berkas tetap mengikuti izin akun Linux.
+
+Untuk Android, pilihan pada installer menyiapkan paket dan image Waydroid. Unit sistem upstream memiliki lifecycle container. Sesi grafis pengguna memiliki interaksi pemasangan APK serta peluncuran aplikasi. Penyiapan sistem terpisah dari eksekusi file yang dipilih pengguna. Rincian paket, state, dan kriteria penerimaan ada di [rancangan kompatibilitas aplikasi](app-compatibility.md).
+
 ### Harness dan computer use
 
 Harness adalah aplikasi opsional dengan update melalui pacman untuk edisi distro. Helper berjalan sebagai user-session child melalui inherited stdio. Pilihan Rust adalah arah implementasi; adapter upstream harus tetap mematuhi handshake dan batas kemampuan yang tervalidasi.

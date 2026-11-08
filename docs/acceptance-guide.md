@@ -112,6 +112,8 @@ snapper -c root list
 
 `getent passwd liveuser` diharapkan tidak menemukan akun (exit 2), bukan lulus karena command exit 0. Periksa pula bahwa tidak ada sudo tanpa password khusus ISO, autologin live, service pacman-init khusus ISO, hook `archiso`, atau repo paket sementara pada target. Jangan memasang Calamares atau alat build ISO ke target sebagai pengganti pemisahan yang benar.
 
+Setelah integrasi kompatibilitas tersedia, lanjutkan dengan [skenario penerimaan aplikasi Windows dan Android](app-compatibility.md#skenario-penerimaan) pada target yang sama. Putuskan jaringan sesudah instalasi ConstOS untuk membuktikan penggunaan pertama runtime yang sudah disediakan.
+
 ## Update dan recovery
 
 - Lakukan transaksi update penuh dari repositori yang dipercaya pada target VM, bukan partial upgrade. Reboot dan periksa kernel/initramfs, jaringan, serta preferensi pengguna yang bertahan.

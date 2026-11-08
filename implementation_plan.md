@@ -106,7 +106,7 @@ Pelaksana: agen pengembangan pada sesi ini. Audit terinci disimpan di `docs/audi
 | --- | --- | --- |
 | **A · Live Alpha** | 01–02 | ISO dari checkout bersih, Boot UI dan console fallback bekerja di UEFI, aplikasi inti bisa dipakai dalam sesi live. |
 | **B · Installable Alpha** | 03–05 | Instalasi disk kosong terbukti di VM, reboot tanpa ISO sukses, desktop dengan akun baru dan konfigurasi bertahan, 0 unit gagal, Snapper snapshot awal aktif. Masih perlu uji rollback dan perangkat fisik. |
-| **C · Desktop Beta** | 06–10, termasuk 07A | Menu dan Settings dengan aksi nyata, screenshot, rekaman video/audio, widget, Dynamic Island opsional, serta hasil uji perangkat dan baseline performa. |
+| **C · Desktop Beta** | 06–10, termasuk 07A–07B | Menu dan Settings dengan aksi nyata, screenshot, rekaman video/audio, jalur pemasangan aplikasi Windows teruji, widget, Dynamic Island opsional, serta hasil uji perangkat dan baseline performa. Android mengikuti hasil penerimaan terpisah. |
 | **D · Harness Beta** | 11–13 | Paket Linux Harness, monitor sistem, dan computer use lokal dengan scope, consent, Stop, dan batas kemampuan yang jelas. |
 | **E · ConstOS 1.0** | 14–15 | Paket dan ISO bertanda tangan, update/rollback teruji, hardware yang didukung terdokumentasi, dan batas Harness dibuktikan di sesi Wayland nyata. |
 
@@ -123,6 +123,7 @@ Setiap item yang mulai dikerjakan harus mencatat pemilik perubahan, dependensi, 
 | Live dan installer | P0: boot, console recovery, pemisahan live/installed, install, reboot, dan jalur update/recovery. Polesan visual tidak boleh menghalangi diagnosis atau instalasi. |
 | Settings dan Monitor | Fase 04 membuat kontrak state dan provider minimum yang dipakai UI; fase 08 memperluas collector dan Monitor. Jangan menunggu seluruh fase 08 untuk menyambungkan Settings ke data nyata. |
 | Capture pengguna | Screenshot dasar diuji di fase 02; fase 07A menyelesaikan UI serta rekaman video/audio sebelum Desktop Beta. Probe portal dilakukan lebih awal; fitur ini tidak menunggu Harness. |
+| Kompatibilitas aplikasi | Fase 07B memakai installer target fase 03 dan launcher serta asosiasi file fase 02. Prioritaskan Windows, kemudian Waydroid opsional. |
 | Widget dan Island | Memakai sumber data fase 07–08. Island opsional dan tidak boleh menjadi satu-satunya tempat indikator rekaman atau tombol Stop. |
 | Harness | Probe observasi/izin Wayland boleh berjalan sejak live boot. Integrasi fase 11–13 tidak menghambat desktop, screenshot, atau perekam yang dipakai pengguna biasa. |
 
@@ -281,6 +282,16 @@ Ini fitur pengguna desktop, terpisah dari observasi agen di fase 12. Gunakan apl
 **Fase lulus jika** screenshot bisa disalin/disimpan/dianotasi; video tanpa audio dan setiap mode audio yang didukung dapat diputar ulang; audio-only merekam sumber yang dipilih tanpa izin layar. Uji izin ditolak, cancel, Stop, lock/logout, revoke, disk penuh, perangkat hilang, restart recorder, dua monitor, dan fractional scaling. Catat hasil pada sesi live dan installed; skenario yang gagal memblokir label dukungannya. Desktop Beta memerlukan jalur screenshot, video, dan audio-only dasar yang teruji; Harness tidak menjadi prasyarat.
 
 
+## Fase 07B · Kompatibilitas aplikasi Windows dan Android
+
+Riset dokumentasi upstream dan audit repositori selesai pada 8 November 2026. Desain, dependensi, jalur staging, dan skenario uji dirinci di [rancangan kompatibilitas aplikasi](docs/app-compatibility.md). Integrasi paket, handler file, dan pembuktian runtime masih terbuka.
+
+- [ ] Masukkan Wine dan dependensi yang sudah diverifikasi ke transaksi target. Pasang handler EXE/MSI pada desktop terpasang, siapkan prefix saat diperlukan, dan daftarkan shortcut hanya setelah target aplikasi tersedia.
+- [ ] Buktikan alur Windows pada instalasi bersih tanpa ISO dan dengan jaringan terputus sesudah pemasangan ConstOS. Uji MSI x64, installer EXE x86, program portabel, cancel/error, dan buka ulang dari launcher setelah reboot.
+- [ ] Setelah jalur Windows terbukti, verifikasi sumber paket Waydroid, pasangan image x86_64, serta jalur pembaruannya. Tambahkan pilihan installer dan buktikan pemasangan APK serta jendela terpisah pada Hyprland. Catat batas kernel, GPU, dan ABI dari hasil uji.
+
+**Gerbang Windows** tercapai ketika aplikasi yang diuji bisa dipasang dan dijalankan dari desktop tanpa terminal, konfigurasi manual, atau unduhan runtime setelah login. Dukungan Android mengikuti hasil pengujian tersendiri, termasuk saat inisialisasi atau pemasangan APK gagal.
+
 ## Fase 08 · System Monitor, Doctor, dan widget
 
 - [x] Tulis collector Rust dengan fixture dari Linux dan output `constosctl status --json` sebagai klien pertama. `crates/const-collector`, `constosctl`, dan `constd` selesai dibangun dan lulus 5 uji fixture serta pengujian host riil. Saat paket Rust dan konsumennya siap, ganti dua salinan prototipe Python dan unit HTTP lama dengan satu sumber paket serta IPC sesi. Uji status pada akun biasa dan batasi respons pada metrik yang diperlukan UI.
@@ -400,6 +411,7 @@ Rust helper berjalan di sesi pengguna. Akses dibedakan per capability antara **m
 | 2 | **Selesai pada VM lokal.** Runner Live UEFI lulus pada Windows/WHPX dan Linux/KVM dengan build tercatat. | Bukti 7 November di atas. Workflow GitHub tetap memerlukan runner self-hosted tepercaya saat ingin diaktifkan di CI. |
 | 3 | **Sumber dan smoke awal tersedia.** Tema GRUB, Plymouth, dan SDDM sudah masuk ISO serta diuji pada cold boot KVM dan test mode greeter. | Lengkapi verifikasi manual fallback console GRUB, Escape log Plymouth, autentikasi password gagal/sukses SDDM pada target, dan recovery tema stock sesuai [panduan pengujian terpadu](docs/acceptance-guide.md). |
 | 4 | **Sumber dan probe sesi tersedia.** Aplikasi harian, MIME, GSettings, unit sesi `constos.desktop`, portal, dan `constos-screenshot` sudah masuk ISO serta diverifikasi di KVM. | Lengkapi uji interaktif aplikasi harian, audio, picker portal, seleksi area `Print`, dan lock/logout berulang. |
-| 5 | **Backend storage teruji; instalasi penuh berikutnya.** Paket `constos-core`/`constos-desktop`, launcher `constos-install`, dan backend GPT/ESP/Btrfs `@`/`@home`/`@snapshots` sudah masuk ISO. | Jalankan instalasi penuh pada disk VM kosong 32 GiB+, lepas ISO, reboot dari disk, login akun baru, lalu uji update dan recovery Snapper. |
+| 5 | **Instalasi penuh dan reboot teruji di VM.** Calamares memasang paket core/desktop, menyiapkan GPT/ESP/Btrfs dan snapshot awal, lalu target bisa login setelah ISO dilepas. | Uji update serta recovery sistem dari target terpasang dan verifikasi instalasi pada perangkat fisik. |
+| 6 | **Riset selesai.** Siapkan Wine dalam transaksi target dan integrasikan pemasangan serta peluncuran aplikasi dari Thunar dan Wofi. | Buktikan skenario Windows pada [fase 07B](#fase-07b--kompatibilitas-aplikasi-windows-dan-android), lalu lanjutkan spike Waydroid. |
 
 Keputusan yang masih perlu data adalah daftar hardware yang akan didukung, pilihan aplikasi harian, aset Boot UI final, dan backend yang menyediakan cakupan input Wayland. Repo Dynamic Island Windows akan masuk review desain pada fase 09 setelah tautannya tersedia. Pemilihan toolkit shell dan migrasi host Harness dicatat sebagai keputusan berbasis spike agar pekerjaan yang sudah berfungsi tetap bisa dipakai selama pengembangan.

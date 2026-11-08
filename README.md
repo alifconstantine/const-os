@@ -38,6 +38,7 @@ Arsitektur komponen, batas izin, dan pemisahan profil live dari sistem terpasang
 | Sandbox dan izin | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
 | Screenshot dan rekaman | Print, Alt+Print, launcher, serta Waybar memakai satu helper screenshot area/seluruh desktop dengan clipboard dan cancel. Dukungan runtime mengikuti bukti di roadmap; preview/anotasi serta recorder tetap di fase 07A. |
 | Shell, widget, dan aset | Konfigurasi desktop serta logo tersedia. Shell/Settings terpadu, katalog widget, aksesibilitas, dan pipeline aset masih dalam pengembangan. |
+| Aplikasi Windows dan Android | Direncanakan untuk sistem terpasang. Wine disiapkan oleh installer agar pengguna bisa memasang dan membuka aplikasi Windows dari desktop tanpa setup runtime manual. Waydroid menyusul sebagai pilihan untuk APK yang kompatibel. Lihat [rancangan kompatibilitas aplikasi](docs/app-compatibility.md). |
 
 ---
 
