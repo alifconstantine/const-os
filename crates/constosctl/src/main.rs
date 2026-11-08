@@ -1,17 +1,21 @@
 use std::env;
-use std::process::{Command, exit};
+use std::process::exit;
 use const_collector::Collector;
 
+mod doctor;
+mod update;
+
 fn print_usage() {
-    println!("ConstOS System Inspection CLI (constosctl)");
+    println!("ConstOS System Inspection CLI");
     println!();
     println!("USAGE:");
-    println!("    constosctl <COMMAND> [OPTIONS]");
+    println!("    const <COMMAND> [OPTIONS]");
     println!();
     println!("COMMANDS:");
     println!("    status [--json]    Tampilkan snapshot metrik CPU, memori, ZRAM, dan proses");
     println!("    doctor             Jalankan preflight diagnostik kesehatan sistem ConstOS");
-    println!("    version            Tampilkan versi constosctl");
+    println!("    update             Perbarui sistem dan aplikasi dari repositori pacman");
+    println!("    version            Tampilkan versi CLI ConstOS");
     println!("    help               Tampilkan bantuan ini");
 }
 
@@ -47,7 +51,7 @@ fn run_status(json_mode: bool) {
     }
 
     println!("==================================================");
-    println!(" Const Tsukuyomi - Status Sistem (constosctl) ");
+    println!(" Const Tsukuyomi - Status Sistem ");
     println!("==================================================");
     println!("Kernel        : {}", snapshot.cpu.kernel_release);
     println!("Scheduler     : {}", if snapshot.cpu.bore_detected { "BORE (Burst-Oriented Response Enhancer) [AKTIF]" } else { "Standar / Non-BORE" });
@@ -83,66 +87,6 @@ fn run_status(json_mode: bool) {
     println!("==================================================");
 }
 
-fn run_doctor() {
-    println!("==================================================");
-    println!(" ConstOS Doctor - Pemeriksaan Kesehatan Sistem");
-    println!("==================================================");
-
-    let collector = Collector::default();
-    let snapshot = collector.snapshot();
-
-    // 1. Kernel Check
-    print!("[1] Kernel & Scheduler: ");
-    if snapshot.cpu.bore_detected {
-        println!("PASS (CachyOS BORE terdeteksi: {})", snapshot.cpu.kernel_release);
-    } else {
-        println!("WARN (Bukan kernel BORE: {})", snapshot.cpu.kernel_release);
-    }
-
-    // 2. ZRAM Check
-    print!("[2] ZRAM Swap Device  : ");
-    if let Some(zram) = &snapshot.memory.zram {
-        if zram.compression_ratio > 1.0 {
-            println!("PASS (ZRAM aktif, rasio {:.2}x, hemat {})", zram.compression_ratio, format_bytes(zram.memory_savings_bytes));
-        } else {
-            println!("PASS (ZRAM aktif, alokasi awal)");
-        }
-    } else {
-        println!("FAIL (/sys/block/zram0 tidak tersedia)");
-    }
-
-    // 3. Systemd Failed Units Check
-    print!("[3] Systemd Units     : ");
-    match Command::new("systemctl")
-        .args(["--failed", "--no-legend", "--no-pager"])
-        .output()
-    {
-        Ok(out) => {
-            let stderr_or_stdout = String::from_utf8_lossy(&out.stdout);
-            let lines: Vec<&str> = stderr_or_stdout.lines().filter(|l| !l.trim().is_empty()).collect();
-            if lines.is_empty() {
-                println!("PASS (0 failed units)");
-            } else {
-                println!("FAIL ({} unit gagal terdeteksi)", lines.len());
-                for l in lines.iter().take(3) {
-                    println!("    * {}", l.trim());
-                }
-            }
-        }
-        Err(_) => println!("WARN (Perintah systemctl tidak dapat dijalankan)"),
-    }
-
-    // 4. Snapper Snapshot Config Check
-    print!("[4] Snapper Config    : ");
-    if std::path::Path::new("/etc/snapper/configs/root").exists() {
-        println!("PASS (Konfigurasi root tersedia)");
-    } else {
-        println!("INFO (/etc/snapper/configs/root tidak ada pada sesi ini)");
-    }
-
-    println!("==================================================");
-}
-
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
@@ -155,9 +99,14 @@ fn main() {
             let json_mode = args.iter().any(|a| a == "--json");
             run_status(json_mode);
         }
-        "doctor" => run_doctor(),
+        "doctor" => exit(doctor::run()),
+        "update" if args.len() == 2 => exit(update::run()),
+        "update" => {
+            eprintln!("Penggunaan: const update");
+            exit(2);
+        }
         "version" | "-v" | "--version" => {
-            println!("constosctl 0.1.0 (Const Tsukuyomi Edition)");
+            println!("const {} (Const Tsukuyomi Edition)", env!("CARGO_PKG_VERSION"));
         }
         "help" | "-h" | "--help" => print_usage(),
         unknown => {

@@ -6,7 +6,7 @@ set -euo pipefail
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 output=$(realpath -m -- "$1")
 [[ ! -e "$output" ]] || { printf 'OUTPUT_DIR harus baru: %s\n' "$output" >&2; exit 1; }
-for binary in python3 makepkg fakeroot; do
+for binary in python3 makepkg fakeroot cargo rustc; do
   command -v "$binary" >/dev/null || { printf 'Dependensi build hilang: %s\n' "$binary" >&2; exit 1; }
 done
 mkdir -p -- "$output"
@@ -20,6 +20,7 @@ import sys
 import tarfile
 repo, work, output = map(Path, sys.argv[1:])
 inputs = [
+    'Cargo.toml', 'Cargo.lock', 'crates',
     'assets', 'desktop', 'iso/install-boot.sh', 'iso/grub/constos',
     'iso/airootfs/etc/os-release', 'iso/airootfs/etc/systemd/zram-generator.conf',
     'iso/airootfs/etc/sysctl.d/99-constos-memory.conf', 'installer/pacman.conf',

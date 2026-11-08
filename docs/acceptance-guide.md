@@ -114,9 +114,19 @@ snapper -c root list
 
 Setelah integrasi kompatibilitas tersedia, lanjutkan dengan [skenario penerimaan aplikasi Windows dan Android](app-compatibility.md#skenario-penerimaan) pada target yang sama. Putuskan jaringan sesudah instalasi ConstOS untuk membuktikan penggunaan pertama runtime yang sudah disediakan.
 
+## ConstOS Doctor
+
+Di sistem terpasang, jalankan `const doctor` sebagai pengguna biasa dari terminal desktop dan TTY. Bandingkan hasil dengan `uname -r`, `/proc/swaps`, `systemctl --failed`, dan keberadaan `/etc/snapper/configs/root`. `WARN` mencatat kondisi yang perlu diperhatikan, seperti penanda BORE yang tidak ditemukan. `FAIL` melaporkan temuan seperti unit gagal. `UNKNOWN` berarti pemeriksaan tidak selesai. Exit status `1` berarti ada `FAIL` atau `UNKNOWN`; exit status `0` berarti tidak ada keduanya.
+
+Untuk menguji kegagalan pada VM disposable, jalankan `sudo systemd-run --unit=constos-doctor-qa --wait /usr/bin/false`, lalu jalankan kembali `const doctor` tanpa `sudo`. Pastikan laporan menyebut `constos-doctor-qa.service` dan exit status `1`. Bersihkan unit uji dengan `sudo systemctl reset-failed constos-doctor-qa.service`. Pemeriksaan konfigurasi Snapper sebatas keberadaan berkas. Uji recovery mengikuti skenario di bawah.
+
 ## Update dan recovery
 
-- Lakukan transaksi update penuh dari repositori yang dipercaya pada target VM, bukan partial upgrade. Reboot dan periksa kernel/initramfs, jaringan, serta preferensi pengguna yang bertahan.
+Di ConstOS terpasang, jalankan `const update` dari terminal sebagai pengguna dengan hak administrasi. Masukkan password jika diminta `sudo`. Tinjau daftar paket dari pacman dan konfirmasi sesuai prompt. OS dan aplikasi yang tersedia dari repo pacman yang dikonfigurasi ikut dalam transaksi penuh. Paket ConstOS dapat ikut diperbarui setelah repo rilisnya tersedia. Aplikasi dari pengelola paket lain mengikuti mekanisme masing-masing.
+
+- Di VM uji, catat daftar paket terpasang sebelum transaksi. Batalkan pada prompt akhir dan cocokkan kembali daftar tersebut. Sinkronisasi database repo dapat terjadi sebelum pembatalan.
+- Jalankan `const update` kembali dan setujui transaksi. Periksa versi paket dan hasil akhir pacman. Jika kernel berubah, reboot dari disk tanpa ISO, periksa kernel/initramfs, jaringan, preferensi pengguna, dan jalankan `const doctor`.
+- Uji terminal noninteraktif, sesi live, koneksi putus, dan paket ditolak. Kegagalan sebelum atau selama transaksi harus menghasilkan status keluar sesuai hasil yang dilaporkan. Untuk daftar yang sudah mutakhir, pastikan pacman melaporkan bahwa tidak ada paket yang perlu dipasang.
 - Buat snapshot sebelum perubahan fixture sistem yang dapat dipulihkan. Buktikan restore satu file dari snapshot, lalu latihan recovery sistem melalui jalur rescue yang didokumentasikan. Snapshot terdaftar saja belum membuktikan rollback bisa boot.
 - Jika greeter/compositor gagal, boot Diagnostics/rescue dari ISO dan ambil diagnosis dari TTY. Gunakan hanya disk virtual dengan identitas yang sama saat melakukan mount/chroot.
 - ESP dan `/boot` yang terpisah tidak otomatis tercakup snapshot root. Jangan mengklaim pemulihan kernel, bootloader, atau data home dari snapshot root tanpa mengujinya.

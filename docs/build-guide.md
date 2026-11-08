@@ -7,7 +7,7 @@ Profil awal menargetkan **x86_64 UEFI** dengan GRUB, kernel CachyOS BORE, dan Hy
 Clone repo di filesystem Linux pada host CachyOS x86_64 agar symlink systemd ikut terpasang. Pasang perkakas dan siapkan kepercayaan paket sebelum build.
 
 ```bash
-sudo pacman -Syu --needed archiso base-devel git python cachyos-keyring archlinux-keyring \
+sudo pacman -Syu --needed archiso base-devel git python rust cachyos-keyring archlinux-keyring \
   grub squashfs-tools dosfstools mtools libisoburn boost cmake extra-cmake-modules ninja \
   qt6-tools ckbcomp kcoreaddons libpwquality libxcrypt polkit-qt6 qt6-base \
   qt6-declarative qt6-svg qt6-wayland xkeyboard-config yaml-cpp
@@ -37,6 +37,8 @@ sudo bash iso/buildiso.sh --packages-dir "$packages" --calamares-dir "$calamares
 ```
 
 Staging menyalin profil Archiso dan memanggil `desktop/install.sh`, `iso/install-boot.sh ROOT live`, serta `installer/install.sh`. Desktop diletakkan di `/etc/skel/.config` untuk akun live; tema dan launcher dipasang pada path sistem. Dua paket target dan checksum disertakan di `/usr/share/constos/packages`. Paket `constos-calamares` masuk repo lokal **khusus mkarchiso**, bukan konfigurasi pacman live atau target. `SHA256SUMS` memeriksa arsip dan `SOURCE_SHA256SUMS` mencocokkan sumber masing-masing builder dengan checkout. Kepercayaan tanpa signature hanya berlaku untuk repo lokal hasil build tersebut; signature repo jaringan tetap diwajibkan. Setiap run memakai direktori kerja baru di `iso/work/`. `-w DIR`, `-o DIR`, `--packages-dir DIR`, dan `--calamares-dir DIR` mengubah lokasi kerja, output, serta input paket. ISO muncul di `iso/out/constos-*.iso` secara default. `makepkg` tidak dijalankan sebagai root.
+
+`constos-core` mengompilasi CLI `const` untuk x86_64 generik dengan `Cargo.lock`, termasuk saat host memakai flag CPU native. Build memerlukan `cargo`, `rustc`, dan dependensi Cargo yang sudah ada di cache atau dapat diunduh. Fingerprint paket lokal mencakup workspace Rust dan lockfile.
 
 ## Ekspor logo
 

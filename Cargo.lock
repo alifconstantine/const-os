@@ -39,6 +39,7 @@ dependencies = [
  "const-collector",
  "serde",
  "serde_json",
+ "tempfile",
 ]
 
 [[package]]

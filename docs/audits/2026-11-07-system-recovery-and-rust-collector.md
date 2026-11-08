@@ -130,14 +130,13 @@ Jika Anda melanjutkan pekerjaan di repositori ini, perhatikan kontrak kerja beri
 
 1. **Menjalankan Uji Otomatis:**
    - Uji Installer & Recovery: `python3 -m unittest discover -s tests/installer`
-   - Uji Rust Collector: `cargo test`
-   - Build Binary: `cargo build --release` (menghasilkan binary di `target/release/constosctl` dan `target/release/constd`).
+   - Uji workspace Rust dengan `cargo test --workspace --locked`.
+   - Bangun binary dengan `cargo build --release --locked`. Nama CLI saat ini adalah `target/release/const`. Bagian bukti di atas mencatat nama binary pada tanggal audit.
 2. **Penyimpanan Kode:**
    - Seluruh kode Rust subsistem wajib berada di `crates/` dan terdaftar di `Cargo.toml` root.
    - Jangan menambahkan dependensi crate eksternal yang berat tanpa evaluasi footprint kompilasi dan runtime.
 3. **Penyusunan Paket Arch/CachyOS:**
-   - Langkah integrasi berikutnya untuk paket sistem adalah memasukkan binary `constosctl` dan `constd` ke dalam paket `constos-core` (`packages/constos-core/PKGBUILD`).
-   - Layanan systemd user `constd.service` dapat dipasang di `desktop/systemd/user/constd.service` dan diaktifkan di `constos-session.target`.
+   - Paket `constos-core` kini memasang `const` pada sistem terpasang. Integrasi `constd` dan IPC sesi mengikuti [roadmap fase 08](../../implementation_plan.md#fase-08--system-monitor-doctor-dan-widget).
 4. **Backlog Prioritas Berikutnya:**
    - **Fase 07A (Desktop Capture Suite):** Mengembangkan helper screenshot interaktif dengan opsi simpan otomatis ke `~/Pictures/Screenshots`, integrasi anotasi monokrom, serta perekaman layar PipeWire (`wf-recorder`).
-   - **Fase 04/06 (Settings UI):** Mengembangkan UI pengaturan (Display, Audio, About) yang membaca data langsung dari `constosctl status --json` atau D-Bus/IPC.
+   - **Fase 04/06 (Settings UI):** Mengembangkan UI pengaturan (Display, Audio, About) yang membaca data langsung dari `const status --json` atau D-Bus/IPC.

@@ -12,7 +12,7 @@ Dokumen ini menjelaskan batas komponen dan arah desain. Status serta bukti pener
 | Desktop live | `desktop/install.sh` memasang sesi `constos.desktop` → `constos-session`, Lua Hyprland, unit user `constos-session.target`, tema fallback, portal, MIME, dan override GSettings. | Shell/Settings Quickshell/QML masih perlu spike fokus, multi-monitor, aksesibilitas, dan performa. Fallback tetap tersedia selama cutover. |
 | Screenshot dan media | `constos-screenshot` dipakai oleh Print, Alt+Print, launcher, dan Waybar; seleksi dibatalkan tanpa menimpa clipboard. | Pembuktian pada sesi live/installed penuh, lalu UI screenshot, editor anotasi, recorder video, dan recorder audio di fase 07A. |
 | Sistem dan storage | Konfigurasi ZRAM/sysctl, paket `constos-core`/`constos-desktop`, serta launcher/backend Calamares untuk disk UEFI kosong. Pembuktian instalasi Btrfs, reboot tanpa ISO, dan login akun baru di SDDM telah lulus di VM. | Uji recovery/rollback Snapper dari bootloader dan verifikasi perangkat fisik sebelum ConstOS 1.0. |
-| Telemetri | Prototipe Python `constd` HTTP GET/JSON. | Satu collector Rust bersama, CLI `constosctl`, dan IPC sesi bertipe. HTTP lama dihapus ketika konsumen sudah bermigrasi. |
+| Telemetri | CLI Rust `const` dari `constos-core` membaca data sistem pada target terpasang. Profil live masih memuat prototipe Python `constd` HTTP GET/JSON. | Satu collector Rust bersama dan IPC sesi bertipe. HTTP lama dihapus ketika konsumen sudah bermigrasi. |
 | Harness dan sandbox | Resep paket Harness dan wrapper Bubblewrap tersedia. | Paket Linux lengkap, helper computer use sesi pengguna, izin per capability, dan sandbox teruji. Keberadaan wrapper bukan bukti seluruh workspace/desktop sudah terisolasi. |
 | Aset | Master simbol Const di `assets/const-logo.svg`, ekspor boot/ikon di `assets/exports/`, serta manifest logo tersedia. Tema berada di `desktop/`. | Audit hak logo, aset lain, dan penerimaan boot baru masih diperlukan; pemilihan logo bukan bukti lisensi redistribusi. |
 
@@ -27,7 +27,7 @@ flowchart TD
     LIVE --> SESSION["Sesi pengguna Hyprland"]
     INSTALL --> SESSION
     SESSION --> SHELL["Shell, Settings, widget, dan Monitor"]
-    SHELL --> CORE["constosctl dan constd Rust"]
+    SHELL --> CORE["CLI const dan constd Rust"]
     CORE --> SYSTEM["Kernel dan layanan Linux"]
     SHELL --> CAPTURE["Aplikasi screenshot dan recorder"]
     CAPTURE --> SOURCES["Portal atau compositor, PipeWire"]
@@ -61,6 +61,10 @@ flowchart TD
 ### Sistem lokal
 
 Collector membaca data Linux sebagai pengguna biasa dan memberi hasil bertipe beserta status unavailable/error. CLI, Monitor, widget, dan Harness memakai kontrak metrik yang sama. D-Bus sesi menjadi arah integrasi stream UI; schema, versi, resync, dan lifecycle ditetapkan ketika implementasi dibuat.
+
+`const doctor` bekerja sebagai proses baca-saja di akun pengguna pada target terpasang. Ia memakai collector untuk identitas kernel, `/proc/swaps` untuk swap aktif, `systemctl` untuk daftar unit sistem yang gagal, dan metadata berkas untuk keberadaan konfigurasi Snapper. Pemeriksaan tidak memerlukan daemon Rust, layanan jaringan, atau elevasi.
+
+`const update` berjalan dari terminal interaktif di target terpasang. Setelah memeriksa identitas sistem dan penanda boot live, proses CLI menyerahkan terminal ke `sudo` dan `pacman -Syu`, sehingga status keluar diteruskan langsung. Otorisasi mengikuti kebijakan `sudo` pada target. Konfirmasi, lock transaksi, validasi paket, dan konfigurasi repo tetap milik pacman.
 
 Aksi yang memerlukan elevasi tidak dicampur dengan pembacaan metrik. Gunakan method sempit, validasi parameter, otorisasi per operasi, serta hasil aktual. UI tidak menganggap perubahan sukses hanya karena request terkirim. Jangan menambahkan listener jaringan atau aturan polkit tanpa password untuk menyederhanakan integrasi.
 

@@ -25,7 +25,7 @@ jobs:
 
       # Runner harus sudah CachyOS x86_64 dengan keyring terinisialisasi,
       # dependency Archiso, QEMU dengan virtio-vga, OVMF, tesseract (eng), Python 3, dan sudo -n.
-      # Dependency build Calamares juga harus tersedia; workflow tidak memasang paket.
+      # Toolchain Rust dan dependency build Calamares juga harus tersedia.
       - name: Periksa host dan siapkan direktori bukti baru
         id: paths
         shell: bash
@@ -51,7 +51,7 @@ jobs:
             echo 'Firmware OVMF_CODE/OVMF_VARS harus file yang dapat dibaca user runner.' >&2
             exit 1
           }
-          for tool in sudo python3 qemu-system-x86_64 tesseract mkarchiso pacman git makepkg repo-add cmake ninja; do
+          for tool in sudo python3 qemu-system-x86_64 tesseract mkarchiso pacman git makepkg repo-add cmake ninja cargo rustc; do
             command -v "$tool" >/dev/null || {
               printf 'Tool runner belum tersedia: %s\n' "$tool" >&2
               exit 1
@@ -63,9 +63,12 @@ jobs:
           printf 'root=%s\nbuild=%s\nsmoke=%s\n' \
             "$evidence_root" "$evidence_root/build" "$evidence_root/smoke" >> "$GITHUB_OUTPUT"
 
-      - name: Regresi keselamatan installer tanpa disk
+      - name: Regresi installer dan subsistem Rust
         shell: bash
-        run: python3 -m unittest discover -s tests/installer -p 'test_*.py'
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/installer -p 'test_*.py'
+          cargo test --workspace --locked
 
       - name: Bangun paket lokal sebagai user runner
         shell: bash
