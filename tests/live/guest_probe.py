@@ -207,6 +207,13 @@ def installer_runtime(probe):
     }
 
 
+def live_desktop_without_installer(probe):
+    state = probe.run("systemctl", "--user", "show", "--property=ActiveState", "--value",
+                      "constos-installer-autostart.service")
+    welcome = Path("/usr/share/applications/org.constos.Welcome.desktop").exists()
+    return state == "inactive" and not welcome, {"installer_autostart": state, "welcome_entry": welcome}
+
+
 def boot_metadata(probe):
     cmdline = shlex.split(read_text("/proc/cmdline"))
     sensitive = re.compile(r"password|passwd|token|secret|credential|ssid|(?:^|[._-])key", re.I)
@@ -434,6 +441,7 @@ def baseline(probe):
         probe.check("waybar_layer", lambda: waybar_layer(probe))
         probe.check("hyprland_configerrors", lambda: config_errors(probe))
         probe.check("installer_runtime", lambda: installer_runtime(probe))
+        probe.check("live_desktop_without_installer", lambda: live_desktop_without_installer(probe))
     elif probe.mode == "fallback":
         probe.check("console_boot_target", lambda: (
             "systemd.unit=multi-user.target" in shlex.split(read_text("/proc/cmdline")),

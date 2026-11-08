@@ -6,7 +6,7 @@ Panduan ini mencakup integrasi GRUB, Plymouth, SDDM, desktop live, serta install
 
 Gunakan ISO baru dari sumber yang diuji. Catat checksum, identitas sumber, versi paket, firmware, CPU/RAM VM, waktu, serta direktori bukti. ISO lama yang pernah boot tidak membuktikan perubahan tema atau installer baru. Jangan menguji installer pada disk host atau disk berisi data.
 
-Smoke otomatis dua entri GRUB tidak memasang disk. Untuk pengujian installer manual, buat VM terpisah dengan **satu disk virtual baru**, minimal 32 GiB, RAM awal 8 GiB atau lebih, 4 vCPU, UEFI non-Secure-Boot, dan koneksi internet. Cache unduhan paket menggunakan ruang sesi live; pemeriksaan installer harus gagal sebelum partisi jika sumber daya tidak cukup.
+Smoke otomatis menguji tiga entri GRUB pada VM tanpa disk target. Untuk pengujian installer manual, buat VM terpisah dengan **satu disk virtual baru**, minimal 32 GiB, RAM awal 8 GiB atau lebih, 4 vCPU, UEFI non-Secure-Boot, dan koneksi internet. Cache unduhan paket menggunakan ruang sesi live; pemeriksaan installer harus gagal sebelum partisi jika sumber daya tidak cukup.
 
 Contoh berikut dijalankan sebagai user biasa di host Linux yang sudah memenuhi prasyarat QEMU/OVMF. Sesuaikan path ISO dan firmware sesuai host. Direktori run harus baru; image/NVRAM lama tidak ditimpa.
 
@@ -41,11 +41,23 @@ Di guest, periksa `lsblk -d -o NAME,SIZE,MODEL,SERIAL,WWN`. Disk target harus co
 | Diagnostics | Cold boot entri console; desktop tidak dimulai, `journalctl -b` dapat dibaca dari TTY |
 | Plymouth | Logo/progres terlihat, Escape membuka log, boot tetap maju; kegagalan grafis tidak memutus jalur teks |
 | Desktop live | Autologin hanya akun live, panel/launcher/notifikasi tidak ganda; Super+Enter, Super+Space, Super+E membuka aplikasi yang benar |
-| SDDM | Setelah logout, user/session picker, keyboard layout, fokus Tab, Enter, dan power menu berfungsi. Pilih sesi ConstOS |
-| Login target | Setelah instalasi, akun baru memerlukan autentikasi; password salah menampilkan error tanpa menghilangkan kontrol. Tidak ada autologin live |
+| SDDM | Buka **Opsi masuk** untuk memilih pengguna, sesi, dan tata letak keyboard. Uji fokus Tab, Enter, dan menu daya. Dengan beberapa akun tanpa riwayat, pilih akun secara eksplisit. Uji juga jalur tanpa sesi terdaftar |
+| Login target | Pada boot pertama dengan satu akun baru, pastikan nama akun tampil dan fokus berada di kata sandi. Enter mengirim login ke SDDM, kata sandi salah menampilkan error dan fokus kembali ke kolom, kata sandi benar membuka sesi ConstOS. Login ulang memakai akun terakhir yang masih tersedia |
 | Recovery greeter | Pilih tema stock lewat konfigurasi di TTY sesuai panduan build, restart SDDM, dan pastikan login masih tersedia |
 
 Simpan screenshot setiap tahap yang benar-benar terlihat. Live autologin dapat melewati greeter saat boot; itu bukan bukti tampilan greeter sudah diperiksa. Jangan menguji password atau sesi pribadi pada screenshot yang akan dibagikan.
+
+Biarkan timeout GRUB memilih **Instal ConstOS** dan periksa installer terbuka sekali. Uji **Batal** tanpa perubahan disk, **Coba ConstOS** tanpa wizard otomatis, serta **Diagnostics** ke TTY. Lanjutkan jalur utama sampai reboot tanpa ISO dan login di target.
+
+## Selamat Datang dan Aplikasi Pilihan
+
+| Skenario | Hasil yang harus diamati |
+| --- | --- |
+| Login pertama | Setelah login ke disk terpasang, Selamat Datang terbuka satu kali. Cek fokus dan Tab, cocokkan tiga pintasan dengan aksi, lalu tekan **Selesai** atau **Lewati**. |
+| Login berikutnya | Keluar dan masuk kembali. Welcome tidak muncul otomatis. Cari **Selamat Datang** dan **Aplikasi Pilihan** di Wofi. Uji kedua entri ketika salah satunya sudah terbuka, lalu uji akun kedua yang belum pernah melihat Welcome. |
+| Live | Dari **Coba ConstOS**, launcher installer tetap tersedia. Selamat Datang dan katalog target tidak ada di menu. |
+| Pemasangan | Buka katalog, klik **Pasang** pada satu aplikasi, amati status selama transaksi, lalu cocokkan **Terpasang** dengan `flatpak info --user ID_APLIKASI`. Buka aplikasi dari Wofi dan verifikasi aplikasi tetap tersedia setelah login ulang. |
+| Kegagalan | Uji tanpa jaringan dan dengan remote bernama sama yang salah pada akun uji terpisah. Pastikan tidak ada status sukses, remote lama tetap utuh, dan percobaan ulang setelah kondisi dipulihkan berhasil. |
 
 ## Desktop live dan desktop terpasang
 

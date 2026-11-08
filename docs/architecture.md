@@ -50,9 +50,10 @@ flowchart TD
 | `assets/` | Aset visual sumber/ekspor yang dipakai, dengan provenance dan lisensi yang perlu dicatat. |
 | `docs/` | Arsitektur dan panduan teknis; tidak menyalin backlog atau menyimpan bukti media mentah. |
 | `tests/` | Runner build tercatat dan smoke Live UEFI; probe hanya berjalan pada VM uji, bukan service yang dikirim dalam ISO. |
-| `crates/`, `system/` | Lokasi yang direncanakan untuk Rust dan kebijakan sistem; buat saat implementasinya diperlukan. |
+| `crates/` | Sumber collector Rust, CLI `const` dalam crate `constosctl`, dan daemon `constd`. |
+| `system/` | Lokasi yang direncanakan untuk kebijakan sistem. |
 
-`iso/buildiso.sh` dan paket `constos-desktop` memanggil `desktop/install.sh` serta `iso/install-boot.sh`, sehingga sesi live dan sistem terpasang berbagi sumber desktop/boot yang sama dengan mode konfigurasi yang sesuai. File `.conf` Hyprland lama telah dihapus; sisa file di `desktop/` yang tidak dipasang helper tidak mengubah sesi.
+`iso/buildiso.sh` dan paket `constos-desktop` memanggil `desktop/install.sh` serta `iso/install-boot.sh` dengan mode `live` atau `installed`. Keduanya memakai sumber desktop/boot yang sama. Mode `installed` juga memasang Selamat Datang, katalog, dan entri launcher. File `.conf` Hyprland lama telah dihapus; sisa file di `desktop/` yang tidak dipasang helper tidak mengubah sesi.
 
 `packages/build-calamares.sh` membangun sumber Calamares yang dipatok commit dan checksum terhadap repo generik yang sama dengan ISO. Resep menyertakan dependensi SONAME Boost Python dan batas versi Python agar pergantian ABI tidak diterima diam-diam. `iso/buildiso.sh --calamares-dir DIR` memeriksa checksum arsip/sumber, lalu membuat repo lokal hanya pada konfigurasi build mkarchiso. Config pacman live disalin sebelum repo tersebut ditambahkan; config target berasal dari `installer/pacman.conf`. Installer Calamares dan repo build tidak ikut ke target terpasang.
 
@@ -83,6 +84,14 @@ Capture biasa tidak memberi izin computer use, tidak otomatis mengunggah hasil, 
 Rancangan awal memakai manifest target untuk menyertakan Wine. Paket desktop terpasang memiliki handler MIME dan alur konfirmasi. Wine dan installer aplikasi berjalan sebagai pengguna biasa pada sesi Hyprland. Prefix dan shortcut terkelola dimiliki pengguna. Prefix terpisah membatasi benturan konfigurasi antar aplikasi, sedangkan akses berkas tetap mengikuti izin akun Linux.
 
 Untuk Android, pilihan pada installer menyiapkan paket dan image Waydroid. Unit sistem upstream memiliki lifecycle container. Sesi grafis pengguna memiliki interaksi pemasangan APK serta peluncuran aplikasi. Penyiapan sistem terpisah dari eksekusi file yang dipilih pengguna. Rincian paket, state, dan kriteria penerimaan ada di [rancangan kompatibilitas aplikasi](app-compatibility.md).
+
+### Installer otomatis dan pengenalan desktop
+
+Entri GRUB **Instal ConstOS** menambahkan `constos.install` pada command line kernel. Drop-in sesi khusus ISO menarik `constos-installer-autostart.service` setelah environment Wayland tersedia. Unit memanggil launcher Calamares yang sama dengan menu desktop. Pemeriksaan disk, konfirmasi, dan preflight tetap dilakukan oleh installer. **Coba ConstOS** melewati unit karena penanda kernel tidak ada.
+
+Paket `constos-desktop` memiliki satu aplikasi GTK untuk Selamat Datang dan Aplikasi Pilihan. Service sesi meminta tampilan Welcome pada login pertama. Aplikasi menyimpan pengabaian per akun di `$XDG_STATE_HOME/constos/welcome-seen`, dengan fallback `~/.local/state`. Startup sesi mengimpor direktori XDG yang dipakai sehingga service dan launcher membaca data pengguna yang sama. Membuka tampilan melalui launcher melewati pemeriksaan penanda. Kedua tampilan berbagi instance aplikasi yang sama.
+
+Katalog memakai ID aplikasi tetap dan Flatpak per pengguna. Klik **Pasang** memicu penyiapan remote dari descriptor Flathub yang disertakan paket Flatpak, bila belum ada. Remote dengan URL berbeda, dinonaktifkan, atau tanpa verifikasi GPG ditolak. UI hanya menampilkan sukses setelah Flatpak mengonfirmasi ref aplikasi yang terpasang.
 
 ### Harness dan computer use
 

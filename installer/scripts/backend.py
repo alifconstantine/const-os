@@ -249,7 +249,10 @@ def finalize(root):
     if not config.exists():
         if (root / '.snapshots').is_mount():
             command(['umount', root / '.snapshots'])
-        command(['rm', '-rf', root / '.snapshots'])
+        try:
+            (root / '.snapshots').rmdir()
+        except FileNotFoundError:
+            pass
         # Di dalam chroot, snapper membutuhkan --no-dbus agar tidak mencoba menghubungi daemon host.
         command(['arch-chroot', root, 'snapper', '--no-dbus', '-c', 'root', 'create-config', '/'])
         command(['btrfs', 'subvolume', 'delete', root / '.snapshots'])

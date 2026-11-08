@@ -60,6 +60,9 @@ mousepad
 ristretto
 evince
 file-roller
+gtk4
+python-gobject
+flatpak
 libnotify
 xdg-user-dirs
 xdg-utils

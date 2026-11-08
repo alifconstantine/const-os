@@ -63,11 +63,12 @@ jobs:
           printf 'root=%s\nbuild=%s\nsmoke=%s\n' \
             "$evidence_root" "$evidence_root/build" "$evidence_root/smoke" >> "$GITHUB_OUTPUT"
 
-      - name: Regresi installer dan subsistem Rust
+      - name: Regresi installer, katalog aplikasi, dan subsistem Rust
         shell: bash
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tests/installer -p 'test_*.py'
+          python3 -m unittest discover -s tests/desktop -p 'test_*.py'
           cargo test --workspace --locked
 
       - name: Bangun paket lokal sebagai user runner
@@ -89,7 +90,7 @@ jobs:
             --packages-dir "$(dirname -- "$BUILD_DIR")/packages" \
             --calamares-dir "$(dirname -- "$BUILD_DIR")/calamares"
 
-      - name: Cold boot desktop dan console fallback sebagai user biasa
+      - name: Cold boot installer, desktop live, dan console sebagai user biasa
         shell: bash
         env:
           BUILD_DIR: ${{ steps.paths.outputs.build }}

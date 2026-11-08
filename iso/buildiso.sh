@@ -70,7 +70,7 @@ root="$profile/airootfs"
 install -m 0644 -- "$profile/pacman.conf" "$root/etc/pacman.conf"
 
 # Kedua profil memakai sumber desktop/boot yang sama, bukan salinan konfigurasi.
-bash "$repo_dir/desktop/install.sh" "$root"
+bash "$repo_dir/desktop/install.sh" "$root" live
 bash "$iso_dir/install-boot.sh" "$root" live
 bash "$repo_dir/installer/install.sh" "$root"
 

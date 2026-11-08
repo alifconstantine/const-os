@@ -30,15 +30,16 @@ Arsitektur komponen, batas izin, dan pemisahan profil live dari sistem terpasang
 
 | Komponen | Status |
 | :--- | :--- |
-| Kernel dan proses | Manifest live memilih kernel CachyOS BORE. Prototipe `constd` membaca load average dan sampel state proses. |
-| Boot dan login | Sumber tema GRUB, Plymouth, dan SDDM memakai palet hitam/putih/biru. Penerimaan tema dan jalur fallback dicatat terpisah dari bukti boot baseline. |
+| Kernel | Manifest live memilih kernel CachyOS BORE. |
+| Boot dan login | Sumber ISO memilih **Instal ConstOS** sebagai default, dengan **Coba ConstOS** dan **Diagnostics** sebagai jalur lain. Tema SDDM memilih akun tunggal atau akun terakhir yang masih tersedia, sehingga jalur normal cukup mengisi kata sandi. Pengujian ISO baru dan login aktual mengikuti roadmap. |
 | Memori dan ZRAM | Overlay live mengatur `zram-generator` dengan `zstd`, `vm.swappiness = 100`, dan `vm.vfs_cache_pressure = 50`. |
 | Storage dan installer | Backend UEFI disk kosong serta konfigurasi Btrfs/Snapper terbukti di VM. Calamares lokal API 3.4 telah dibangun ulang dan lulus uji: wizard, cancel aman, instalasi Btrfs/@/@home/@snapshots, reboot tanpa ISO (order=c), SDDM, dan login akun baru berfungsi dengan 0 unit gagal. Rollback bootloader dan hardware fisik masih perlu diuji. Detail di roadmap. |
 | Diagnosis dan telemetri | Paket `constos-core` memasang CLI Rust `const` pada sistem terpasang. Jalankan `const doctor` tanpa `sudo` untuk memeriksa kernel, swap ZRAM, unit systemd yang gagal, dan keberadaan konfigurasi Snapper. `const status --json` menyajikan snapshot metrik. Integrasi daemon Rust `constd` dan Harness masih direncanakan. |
 | Pembaruan | Jalankan `const update` dari terminal pada sistem terpasang. Jika pembaruan tersedia, pacman menampilkan paket OS dan aplikasi dari repo yang dikonfigurasi untuk dikonfirmasi dalam satu transaksi. Lihat [panduan update dan recovery](docs/acceptance-guide.md#update-dan-recovery) untuk cakupan dan verifikasi. |
 | Sandbox dan izin | Ada wrapper Bubblewrap yang menolak eksekusi saat `bwrap` tidak tersedia. Kebijakan akses dan integrasi agen masih perlu diuji. |
 | Screenshot dan rekaman | Print, Alt+Print, launcher, serta Waybar memakai satu helper screenshot area/seluruh desktop dengan clipboard dan cancel. Dukungan runtime mengikuti bukti di roadmap; preview/anotasi serta recorder tetap di fase 07A. |
-| Shell, widget, dan aset | Konfigurasi desktop serta logo tersedia. Shell/Settings terpadu, katalog widget, aksesibilitas, dan pipeline aset masih dalam pengembangan. |
+| Shell, widget, dan aset | Hyprland menjalankan sesi Wayland. Waybar, Wofi, dan Mako menyediakan panel, launcher, dan notifikasi saat ini. Shell/Settings terpadu dan arah visual Liquid Glass minimalis masih dalam pengembangan. |
+| Selamat Datang dan Aplikasi Pilihan | Implementasi target membuka tur pintasan pada login pertama. Kedua tampilan bisa dibuka dari launcher. Katalog menawarkan LibreOffice, VLC, LocalSend, dan KeePassXC dari Flathub. Penerimaan pada sistem terpasang mengikuti roadmap. |
 | Aplikasi Windows dan Android | Direncanakan untuk sistem terpasang. Wine disiapkan oleh installer agar pengguna bisa memasang dan membuka aplikasi Windows dari desktop tanpa setup runtime manual. Waydroid menyusul sebagai pilihan untuk APK yang kompatibel. Lihat [rancangan kompatibilitas aplikasi](docs/app-compatibility.md). |
 
 ---
@@ -98,7 +99,7 @@ Arah visual ditetapkan di [design.md](design.md): dasar hitam/putih, aksen biru 
 
 Baseline ISO live sudah dibangun di Linux dan diuji di VM UEFI. Bukti itu tidak otomatis berlaku untuk integrasi tema/desktop/installer berikutnya. Gunakan [panduan pengujian terpadu](docs/acceptance-guide.md) untuk memeriksa alur baru dari boot sampai instalasi disk kosong dan reboot tanpa ISO; status aktual ada di roadmap.
 
-Runner smoke Live UEFI dan workflow Linux manual tersedia untuk mengulang pemeriksaan dua entri GRUB, tiga shortcut, jaringan, ZRAM, dan jurnal TTY. Cara menjalankan serta batas buktinya ada di [panduan build](docs/build-guide.md#build-tercatat-dan-smoke-live-uefi); hasil eksekusi dicatat di roadmap, terpisah dari kesiapan workflow CI.
+Runner smoke Live UEFI dan workflow Linux manual mencakup tiga entri GRUB, pembukaan installer pada VM tanpa disk target, shortcut desktop, jaringan, ZRAM, dan jurnal TTY. Cara menjalankan serta batas buktinya ada di [panduan build](docs/build-guide.md#build-tercatat-dan-smoke-live-uefi); hasil eksekusi dicatat di roadmap.
 
 Panduan kontribusi agen ada di [AGENTS.md](AGENTS.md), dan prosedur kerja proyek diindeks di [SKILLS.md](SKILLS.md). Perubahan yang memengaruhi perilaku, arsitektur, atau cara kerja harus menyertakan pembaruan dokumen yang relevan; detail aturannya ada di AGENTS.md.
 

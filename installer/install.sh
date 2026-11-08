@@ -21,4 +21,6 @@ done
 install -Dm755 "$source_dir/scripts/backend.py" "$root/usr/lib/constos-installer/backend.py"
 install -Dm755 "$source_dir/scripts/constos-install" "$root/usr/bin/constos-install"
 install -Dm644 "$source_dir/applications/constos-install.desktop" "$root/usr/share/applications/constos-install.desktop"
+install -Dm644 "$source_dir/session/constos-installer-autostart.service" "$root/usr/lib/systemd/user/constos-installer-autostart.service"
+install -Dm644 "$source_dir/session/10-installer.conf" "$root/usr/lib/systemd/user/constos-session.target.d/10-installer.conf"
 install -m644 "$source_dir/target-packages.x86_64" "$source_dir/pacman.conf" "$root/usr/share/constos/installer/"

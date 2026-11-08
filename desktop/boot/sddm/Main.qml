@@ -13,6 +13,10 @@ Pane {
     property bool authenticating: false
     property bool failed: false
     property string statusMessage: ""
+    property bool showLoginOptions: true
+    readonly property bool hasLoginSelection: user.editText.trim().length > 0
+                                             && session.currentIndex >= 0 && session.currentIndex < session.count
+    readonly property bool loginOptionsVisible: showLoginOptions || !hasLoginSelection
 
     palette.window: "#161616"
     palette.base: "#1E1E1E"
@@ -28,7 +32,7 @@ Pane {
     background: Rectangle { color: "#161616" }
 
     function login() {
-        if (authenticating || user.editText.trim().length === 0 || session.count === 0)
+        if (authenticating || !hasLoginSelection)
             return;
         failed = false;
         statusMessage = qsTr("Memeriksa kredensial…");
@@ -121,15 +125,24 @@ Pane {
                 elide: Text.ElideRight
             }
 
+            Label {
+                width: parent.width
+                visible: !root.loginOptionsVisible
+                horizontalAlignment: Text.AlignHCenter
+                text: user.editText.trim()
+                textFormat: Text.PlainText
+                elide: Text.ElideRight
+            }
             Column {
                 width: parent.width
                 spacing: 5
+                visible: root.loginOptionsVisible
                 Label { text: qsTr("Pengguna") }
                 Picker {
                     id: user
                     model: userModel
                     textRole: "name"
-                    currentIndex: userModel.lastIndex
+                    currentIndex: -1
                     editable: true
                     enabled: !root.authenticating
                     Accessible.name: qsTr("Pengguna")
@@ -149,7 +162,7 @@ Pane {
                     selectByMouse: true
                     enabled: !root.authenticating
                     Accessible.name: qsTr("Kata sandi")
-                    KeyNavigation.tab: session
+                    KeyNavigation.tab: root.loginOptionsVisible ? session : loginButton
                     onAccepted: root.login()
                     background: Rectangle {
                         color: "#1E1E1E"
@@ -162,21 +175,22 @@ Pane {
             Column {
                 width: parent.width
                 spacing: 5
+                visible: root.loginOptionsVisible
                 Label { text: qsTr("Sesi") }
                 Picker {
                     id: session
                     model: sessionModel
                     textRole: "name"
-                    currentIndex: Math.max(0, sessionModel.lastIndex)
+                    currentIndex: count > 0 ? Math.max(0, Math.min(count - 1, sessionModel.lastIndex)) : -1
                     enabled: !root.authenticating
                     Accessible.name: qsTr("Sesi desktop")
-                    KeyNavigation.tab: layout.visible && layout.enabled ? layout : loginButton
+                    KeyNavigation.tab: layout.enabled && layout.count > 0 ? layout : loginButton
                 }
             }
             Column {
                 width: parent.width
                 spacing: 5
-                visible: keyboard.layouts.length > 0
+                visible: root.loginOptionsVisible && keyboard.layouts.length > 0
                 Label { text: qsTr("Tata letak keyboard") }
                 Picker {
                     id: layout
@@ -197,7 +211,7 @@ Pane {
             }
             Label {
                 width: parent.width
-                height: 40
+                visible: text.length > 0
                 text: session.count === 0 ? qsTr("Tidak ada sesi desktop terpasang.") : root.statusMessage
                 color: root.failed || session.count === 0 ? "#F87171" : "#B0B0B0"
                 wrapMode: Text.WordWrap
@@ -208,16 +222,31 @@ Pane {
                 width: parent.width
                 text: qsTr("Masuk")
                 highlighted: true
-                enabled: !root.authenticating && user.editText.trim().length > 0 && session.count > 0
-                KeyNavigation.tab: powerButton
+                enabled: !root.authenticating && root.hasLoginSelection
+                KeyNavigation.tab: loginOptionsButton
                 onClicked: root.login()
+            }
+            ActionButton {
+                id: loginOptionsButton
+                width: parent.width
+                visible: root.hasLoginSelection
+                enabled: !root.authenticating
+                text: root.loginOptionsVisible ? qsTr("Sembunyikan opsi masuk") : qsTr("Opsi masuk")
+                KeyNavigation.tab: powerButton
+                onClicked: {
+                    root.showLoginOptions = !root.showLoginOptions;
+                    if (root.showLoginOptions)
+                        user.forceActiveFocus();
+                    else
+                        password.forceActiveFocus();
+                }
             }
             ActionButton {
                 id: powerButton
                 width: parent.width
                 text: qsTr("Daya")
                 enabled: !root.authenticating
-                KeyNavigation.tab: user
+                KeyNavigation.tab: root.loginOptionsVisible ? user : password
                 onClicked: powerMenu.open()
                 Menu {
                     id: powerMenu
@@ -244,7 +273,10 @@ Pane {
     }
 
     Component.onCompleted: {
-        user.editText = userModel.lastUser;
+        const rememberedIndex = user.find(userModel.lastUser, Qt.MatchExactly);
+        user.currentIndex = rememberedIndex >= 0 ? rememberedIndex : (user.count === 1 ? 0 : -1);
+        user.editText = user.currentText;
+        root.showLoginOptions = !root.hasLoginSelection;
         if (user.editText.length > 0)
             password.forceActiveFocus();
         else

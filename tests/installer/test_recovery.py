@@ -1,4 +1,5 @@
 """Regresi pemulihan snapshot Snapper dan batas keselamatan target terpasang."""
+import errno
 import importlib.util
 import json
 from pathlib import Path
@@ -44,8 +45,22 @@ class TargetRecoverySafetyTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'Konfigurasi autologin tidak diizinkan'):
             backend.finalize(self.root)
 
+    def test_snapper_setup_preserves_files_at_unmounted_snapshot_path(self):
+        snapshots = self.root / '.snapshots'
+        snapshots.mkdir()
+        existing = snapshots / 'retained'
+        existing.write_text('keep')
+
+        with patch.object(backend, 'command'):
+            with self.assertRaises(OSError) as failure:
+                backend.finalize(self.root)
+
+        self.assertEqual(failure.exception.errno, errno.ENOTEMPTY)
+        self.assertEqual(existing.read_text(), 'keep')
+
     def test_snapper_subvolume_and_config_creation(self):
         """Pastikan subvolume @snapshots dipertahankan dan create-config dijalankan dengan --no-dbus."""
+        (self.root / '.snapshots').mkdir()
         commands = []
         def fake_command(args, **kwargs):
             commands.append(list(args))

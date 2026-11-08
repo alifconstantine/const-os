@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Boot the unmodified live ISO twice and exercise its real keyboard paths."""
+"""Boot the unmodified live ISO through each GRUB entry."""
 
 import argparse
 import hashlib
@@ -221,15 +221,30 @@ def read_screen(args, vm, name):
 def select_grub(args, vm, mode, deadline):
     while time.monotonic() < deadline:
         text = read_screen(args, vm, "boot")
-        if "constos live" in text and "console fallback" in text:
-            # Stop GRUB's countdown before selecting; never edit the kernel command line.
-            vm.key("up")
-            vm.key("home" if mode == "desktop" else "end")
+        if "instal constos" in text and "coba constos" in text and "console fallback" in text:
+            if mode != "installer":
+                vm.key("up")
             vm.screenshot("grub")
+            if mode == "installer":
+                # Exercise the real default and timeout, without selecting an entry.
+                return
+            if mode == "desktop":
+                vm.key("home")
+                vm.key("down")
+            else:
+                vm.key("end")
             vm.key("ret")
             return
         time.sleep(0.2)
     raise SmokeFailure("GRUB entries were not recognized before the boot deadline")
+
+
+def installer_without_disk(args, vm, deadline):
+    while time.monotonic() < deadline:
+        if "tidak ada disk kosong" in read_screen(args, vm, "installer-waiting"):
+            return vm.screenshot("installer-no-disk")
+        time.sleep(1)
+    raise SmokeFailure("The default boot did not automatically open the installer no-disk dialog")
 
 
 def next_report(server, vm, stage, deadline, results):
@@ -261,6 +276,10 @@ def run_boot(args, server, mode):
     try:
         vm.start()
         select_grub(args, vm, mode, min(deadline, started + 90))
+        if mode == "installer":
+            screenshot = installer_without_disk(args, vm, deadline)
+            return {"ok": True, "elapsed_seconds": round(time.monotonic() - started, 2),
+                    "evidence": str(screenshot)}
         command = f"curl -fsS {server.guest_url}/{mode}.py | python\n"
         # Readiness is proven by a report from the real terminal, not by a fixed boot sleep.
         while time.monotonic() < deadline:
@@ -380,7 +399,7 @@ def main():
         server = ProbeServer(Path(__file__).with_name("guest_probe.py").read_text(encoding="utf-8"))
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
-        for mode in ("desktop", "fallback"):
+        for mode in ("installer", "desktop", "fallback"):
             print(f"Booting {mode}; evidence: {args.output / mode}", flush=True)
             summary["boots"][mode] = run_boot(args, server, mode)
             save_json(args.output / "summary.json", summary)

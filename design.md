@@ -132,7 +132,7 @@ Escape menutup panel atau membatalkan preview yang bisa dibatalkan, lalu mengemb
 | Surface | Pemakaian desain dan batas |
 | --- | --- |
 | GRUB dan Plymouth | Palet statis vendor, logo sederhana, kontras tinggi, navigasi/log teks tetap tersedia; tidak membaca wallpaper atau preferensi pribadi |
-| SDDM | Identitas vendor yang sama; fokus, user/session picker, password salah, dan fallback stock. Tidak bergantung pada tema user sebelum login |
+| SDDM | Identitas vendor yang sama, nama akun dan fokus ke kata sandi bila akun sudah dipilih. **Opsi masuk** membuka pilihan akun, sesi, dan tata letak keyboard. Tema stock tersedia untuk recovery |
 | Lockscreen | Token sesi yang terakhir valid bila backend mendukung; autentikasi dan privasi lebih dahulu, tanpa riwayat clipboard/notifikasi sensitif |
 | Shell dan Settings | Token semantik bersama; launcher, panel, Quick Settings, notifikasi, dan form memakai state yang sama |
 | Capture dan izin | Sumber, status aktif, scope, durasi, cancel, dan Stop terbaca. Indikator tidak bergantung pada Island atau warna wallpaper |
@@ -140,6 +140,12 @@ Escape menutup panel atau membatalkan preview yang bisa dibatalkan, lalu mengemb
 | Harness | Menjaga identitas studio yang selaras; sinkronisasi tema aplikasi belum diimplementasikan dan tidak menjadi dependensi desktop |
 
 Jangan memakai wallpaper pribadi untuk boot/greeter global. Konfigurasi sesi live dan default target tetap terpisah sesuai arsitektur. Warna terminal ANSI mempertahankan makna serta kontrasnya; mengganti aksen shell tidak otomatis mengganti semua warna terminal.
+
+## Arah Liquid Glass minimalis
+
+Mulai dari satu launcher pada sesi Hyprland, dengan prototype Quickshell/QML. Pakai permukaan transparan untuk panel yang mengambang, dengan blur lokal, batas tipis, dan aksen biru pada fokus atau pilihan aktif. Konten utama, dialog penting, dan fallback tanpa blur memakai permukaan opak yang mudah dibaca. Ukur kontras di wallpaper terang dan gelap, navigasi keyboard, skala, reduced motion, dan biaya render sebelum memakai efek yang sama di Quick Settings atau panel.
+
+Ryoku menjadi referensi untuk dua keputusan. Installer dapat menjadi tujuan pertama setelah boot, sedangkan shell dan pilihan gaya bar berada di atas compositor. Pelajari kejelasan langkah dan fallback dari installer Ryoku, serta pemisahan launcher, panel, dan token pada Orpheus atau Kairos. Tetapkan token dan interaksi ConstOS sendiri sebelum meninjau adaptasi aset atau kode. [Installer Ryoku](https://github.com/Ryoku-dev/ryoku/blob/f7197d72de8a21e44b0bea922bdd915f28f6b327/installation/iso/README.md) · [Gaya bar Ryoku](https://github.com/Ryoku-dev/ryoku/blob/f7197d72de8a21e44b0bea922bdd915f28f6b327/docs/barstyles.md)
 
 ## Kondisi awal dan keputusan yang belum selesai
 

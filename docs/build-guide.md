@@ -36,7 +36,7 @@ bash iso/buildiso.sh --stage-only --packages-dir "$packages" --calamares-dir "$c
 sudo bash iso/buildiso.sh --packages-dir "$packages" --calamares-dir "$calamares" -v
 ```
 
-Staging menyalin profil Archiso dan memanggil `desktop/install.sh`, `iso/install-boot.sh ROOT live`, serta `installer/install.sh`. Desktop diletakkan di `/etc/skel/.config` untuk akun live; tema dan launcher dipasang pada path sistem. Dua paket target dan checksum disertakan di `/usr/share/constos/packages`. Paket `constos-calamares` masuk repo lokal **khusus mkarchiso**, bukan konfigurasi pacman live atau target. `SHA256SUMS` memeriksa arsip dan `SOURCE_SHA256SUMS` mencocokkan sumber masing-masing builder dengan checkout. Kepercayaan tanpa signature hanya berlaku untuk repo lokal hasil build tersebut; signature repo jaringan tetap diwajibkan. Setiap run memakai direktori kerja baru di `iso/work/`. `-w DIR`, `-o DIR`, `--packages-dir DIR`, dan `--calamares-dir DIR` mengubah lokasi kerja, output, serta input paket. ISO muncul di `iso/out/constos-*.iso` secara default. `makepkg` tidak dijalankan sebagai root.
+Staging menyalin profil Archiso dan memanggil `desktop/install.sh ROOT live`, `iso/install-boot.sh ROOT live`, serta `installer/install.sh`. Desktop diletakkan di `/etc/skel/.config` untuk akun live; tema dan launcher dipasang pada path sistem. Dua paket target dan checksum disertakan di `/usr/share/constos/packages`. Paket `constos-desktop` memakai mode `installed` untuk memasang Welcome dan katalog. Paket `constos-calamares` masuk repo lokal **khusus mkarchiso**, bukan konfigurasi pacman live atau target. `SHA256SUMS` memeriksa arsip dan `SOURCE_SHA256SUMS` mencocokkan sumber masing-masing builder dengan checkout. Kepercayaan tanpa signature hanya berlaku untuk repo lokal hasil build tersebut; signature repo jaringan tetap diwajibkan. Setiap run memakai direktori kerja baru di `iso/work/`. `-w DIR`, `-o DIR`, `--packages-dir DIR`, dan `--calamares-dir DIR` mengubah lokasi kerja, output, serta input paket. ISO muncul di `iso/out/constos-*.iso` secara default. `makepkg` tidak dijalankan sebagai root.
 
 `constos-core` mengompilasi CLI `const` untuk x86_64 generik dengan `Cargo.lock`, termasuk saat host memakai flag CPU native. Build memerlukan `cargo`, `rustc`, dan dependensi Cargo yang sudah ada di cache atau dapat diunduh. Fingerprint paket lokal mencakup workspace Rust dan lockfile.
 
@@ -92,11 +92,12 @@ Path firmware mengikuti [paket Arch edk2-ovmf](https://archlinux.org/packages/ex
 | Jalur | Bukti yang diperiksa |
 | --- | --- |
 | Build Linux | SHA checkout bersih sebelum/sesudah build, checksum paket lokal dan sumbernya, seluruh symlink overlay yang terlacak tetap symlink saat staging, versi paket host, log Archiso, satu ISO beserta SHA-256. |
-| Desktop | UEFI dan kernel BORE, identitas ConstOS, akun `liveuser` non-root, symlink systemd, nol unit gagal, SDDM aktif, sesi Wayland aktual, Waybar terpetakan dan tidak ada config error. `Super+Enter`, `Super+Space`, dan `Super+E` harus menghasilkan Foot aktif, surface Wofi, dan window Thunar. |
+| Instal ConstOS | Biarkan default GRUB berjalan sampai dialog installer melaporkan tidak ada disk kosong. VM smoke hanya membawa ISO dan firmware. |
+| Coba ConstOS | UEFI dan kernel BORE, identitas ConstOS, akun `liveuser` non-root, symlink systemd, nol unit gagal, SDDM aktif, sesi Wayland aktual, Waybar terpetakan, serta pemeriksaan bahwa installer tidak terbuka otomatis. `Super+Enter`, `Super+Space`, dan `Super+E` membuka Foot, Wofi, dan Thunar. |
 | Jaringan/ZRAM | NetworkManager aktif, IPv4 dan lease DHCP pada interface non-loopback, serta perangkat ZRAM aktif sebagai swap dengan algoritme `zstd`. Ini bukan uji internet atau Wi-Fi fisik. |
-| Console fallback | Cold boot entri kedua dengan `systemd.unit=multi-user.target`, SDDM tidak aktif, controlling terminal `/dev/tty1`, dan `sudo -n journalctl -b` membaca entri dengan boot ID yang sesuai. |
+| Diagnostics | Cold boot entri terakhir dengan `systemd.unit=multi-user.target`, SDDM tidak aktif, controlling terminal `/dev/tty1`, dan `sudo -n journalctl -b` membaca entri dengan boot ID yang sesuai. |
 
-`build.json`, `build.log`, `staging.log`, `host-packages.txt`, checksum, dan ISO berada di direktori build. Direktori smoke menyimpan `summary.json`, report per boot termasuk daftar paket guest, perintah/versi QEMU, hash firmware dan runner/probe, screenshot GRUB/desktop/launcher/Thunar/TTY, serta log kegagalan. Exit nonzero atau `ok: false` memblokir penerimaan. Output yang ada tidak dihapus untuk mencoba ulang; pilih direktori baru.
+`build.json`, `build.log`, `staging.log`, `host-packages.txt`, checksum, dan ISO berada di direktori build. Direktori smoke menyimpan `summary.json`, report desktop dan console, perintah/versi QEMU, hash firmware dan runner/probe, screenshot GRUB/dialog installer/desktop/launcher/Thunar/TTY, serta log kegagalan. Exit nonzero atau `ok: false` memblokir penerimaan. Output yang ada tidak dihapus untuk mencoba ulang; pilih direktori baru.
 
 Untuk menguji ISO yang sudah ada, jalankan runner tanpa `--build-evidence`; hasilnya mencatat checksum tetapi **tidak mengklaim SHA sumber build**. Jika metadata diberikan, nama/checksum ISO, keberhasilan build, dan identitas checkout bersih harus cocok sebelum VM dijalankan.
 
@@ -110,12 +111,13 @@ Isi repository variables `CONSTOS_OVMF_CODE` dan `CONSTOS_OVMF_VARS` dengan path
 
 ## Pemeriksaan manual tambahan
 
-Untuk diagnosis interaktif, boot ISO dengan profil VM yang sama. Periksa dua entri GRUB, tiga shortcut di atas, `uname -r`, `systemctl --failed`, `nmcli general status`, `zramctl`, serta `journalctl -b` dari console fallback. Gunakan skenario fase 02 roadmap untuk audio, file/MIME, lock/logout, screenshot, dan portal; kelulusan runner tidak menggantikan skenario tersebut.
+Untuk diagnosis interaktif, boot ISO dengan profil VM yang sama. Periksa tiga entri GRUB, tiga shortcut di atas, `uname -r`, `systemctl --failed`, `nmcli general status`, `zramctl`, serta `journalctl -b` dari Diagnostics. Gunakan skenario fase 02 roadmap untuk audio, file/MIME, lock/logout, screenshot, dan portal; kelulusan runner tidak menggantikan skenario tersebut.
 
-Regresi batas disk dan arsip preflight dapat dijalankan tanpa root dan tanpa perangkat blok:
+Regresi batas disk, arsip preflight, dan backend katalog dapat dijalankan sebagai pengguna biasa tanpa disk uji.
 
 ```bash
 python3 -m unittest discover -s tests/installer -p 'test_*.py'
+python3 -m unittest discover -s tests/desktop -p 'test_*.py'
 ```
 
 Tes ini bukan bukti instalasi penuh. Runner Live UEFI sekarang juga memanggil `calamares --version` pada sesi desktop untuk mendeteksi binary/library gagal sebelum menerima ISO; kelulusan runner lama sebelum gate ini ditambahkan tidak membuktikan installer siap.
